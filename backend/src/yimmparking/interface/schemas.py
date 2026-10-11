@@ -135,6 +135,10 @@ class HealthResponse(BaseModel):
     geocoder_configured: bool
     sources: list[SourceStatusDTO]
     usage: list[UsageDTO]
+    # Which build is answering (see interface/build_info.py); a deploy check compares these.
+    version: str | None = None  # git commit of the running backend; None when unknown
+    frontend_version: str | None = None  # commit the served web build was made from
+    started_at: str  # when this process started, ISO-8601 UTC
 
 
 class ErrorBody(BaseModel):

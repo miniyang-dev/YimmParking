@@ -26,6 +26,7 @@ from yimmparking.domain.geo import GeoPoint, initial_bearing_deg
 from yimmparking.domain.model import City
 from yimmparking.domain.ranking import RankingPolicy, SortMode
 from yimmparking.domain.vendor import DEFAULT_SHOW, Preference, Vendor, VendorPick
+from yimmparking.interface.build_info import frontend_version, process_build_info
 from yimmparking.interface.container import Container, build_container
 from yimmparking.interface.schemas import (
     AlternativeDTO,
@@ -41,7 +42,7 @@ from yimmparking.interface.schemas import (
     SourceStatusDTO,
     UsageDTO,
 )
-from yimmparking.interface.settings import Settings
+from yimmparking.interface.settings import BACKEND_DIR, Settings
 
 Lat = Annotated[float, Query(ge=21.5, le=25.5, description="WGS84 latitude (Taiwan)")]
 Lng = Annotated[float, Query(ge=119.0, le=122.5, description="WGS84 longitude (Taiwan)")]
@@ -166,6 +167,8 @@ def create_app(container: Container | None = None, settings: Settings | None = N
         allow_headers=["*"],
     )
 
+    build = process_build_info(BACKEND_DIR.parent)
+
     def c() -> Container:
         return state["c"]
 
@@ -220,6 +223,9 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             geocoder_configured=ct.geocoder_configured,
             sources=sources,
             usage=usage,
+            version=build.version,
+            frontend_version=frontend_version(settings.web_dist),
+            started_at=build.started_at,
         )
 
     @app.get("/api/v1/parking/nearby", response_model=ParkingSearchResponse, responses=responses)

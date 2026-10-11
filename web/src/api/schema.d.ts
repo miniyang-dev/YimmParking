@@ -199,6 +199,12 @@ export interface components {
             sources: components["schemas"]["SourceStatusDTO"][];
             /** Usage */
             usage: components["schemas"]["UsageDTO"][];
+            /** Version */
+            version?: string | null;
+            /** Frontend Version */
+            frontend_version?: string | null;
+            /** Started At */
+            started_at: string;
         };
         /** OriginDTO */
         OriginDTO: {

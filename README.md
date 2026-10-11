@@ -40,6 +40,10 @@ bash ~/projects/YimmParking/deploy/wsl-setup.sh   # 建 venv、（必要時）�
 - `yimmparking-api`：同一個程序提供 API 與已建置的前端，監聽 `127.0.0.1:5173`。
 - `yimmparking-worker`：持續更新停車場與即時空位。
 - 資料庫在 WSL 的 `~/yimmparking/data/yimmparking.db`（與 Windows 上 `backend/data` 是兩份）。
-- 改了後端程式：`systemctl --user restart yimmparking-api yimmparking-worker`。
-- 改了前端：重新 `pnpm build` 即可（靜態檔，不必重啟）。
+- **日常佈署**：`bash ~/projects/YimmParking/deploy/deploy.sh`（`pnpm install`、`pnpm build`、
+  把這次建置的 commit 寫進 `web/dist/version.txt`、重啟兩個 service）。第一次或服務單元不存在時才跑 `wsl-setup.sh`。
+- `GET /api/v1/health` 回報 `version`（後端啟動時的 git commit）、`frontend_version`（`version.txt`，
+  前端建置自哪個 commit）與 `started_at`（行程啟動時間）。佈署驗證用它確認「跑的真的是新版」：
+  SpriteFlow 的「佈署」按鈕就是執行 `deploy.sh`，再輪詢這支直到兩個版本都等於剛佈署的 commit。
+- 只改前端：重新 `pnpm build` 並更新 `version.txt` 即可（靜態檔，不必重啟）；改了後端程式一定要重啟。
 - 本機開發前端用 `pnpm dev`（埠 5174，會代理 `/api` 到後端）。

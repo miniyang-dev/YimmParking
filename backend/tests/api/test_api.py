@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from datetime import UTC, datetime
 
@@ -175,6 +176,31 @@ def test_health_reports_sources(client: TestClient) -> None:
     assert taipei["lots"] == 3
     # New Taipei has no data in this fixture, so the service must say it is degraded.
     assert body["status"] == "degraded"
+
+
+def test_health_identifies_the_running_build(client: TestClient) -> None:
+    body = client.get("/api/v1/health").json()
+    # The tests run inside the git checkout, so the commit is normally known; without git it is null.
+    assert body["version"] is None or re.fullmatch(r"[0-9a-f]{40}", body["version"])
+    started = datetime.fromisoformat(body["started_at"])
+    assert started.tzinfo is not None  # a deploy check compares it with its own UTC timestamps
+    assert body["frontend_version"] is None  # this fixture serves no web build
+    # Stable for the life of the process: it is read once, when the app is created.
+    again = client.get("/api/v1/health").json()
+    assert (again["version"], again["started_at"]) == (body["version"], body["started_at"])
+
+
+def test_health_reports_the_web_build_commit_and_follows_a_rebuild(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "index.html").write_text("<!doctype html><title>x</title>", encoding="utf-8")
+    container = build("k")
+    object.__setattr__(container.settings, "web_dist", tmp_path)
+    with TestClient(create_app(container=container)) as c:
+        assert c.get("/api/v1/health").json()["frontend_version"] is None  # not stamped yet
+        (tmp_path / "version.txt").write_text("a" * 40 + "\n", encoding="utf-8")
+        assert c.get("/api/v1/health").json()["frontend_version"] == "a" * 40
+        (tmp_path / "version.txt").write_text("b" * 40, encoding="utf-8")  # rebuilt, no restart
+        assert c.get("/api/v1/health").json()["frontend_version"] == "b" * 40
+    container.close()
 
 
 def test_nearby_orders_by_brand_then_distance(client: TestClient) -> None:
