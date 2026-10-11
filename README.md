@@ -29,9 +29,12 @@ pnpm dev
 `parking.yimmhub.com` 由 WSL 裡的 cloudflared 轉到 `http://localhost:5173`，這個 `localhost`
 指的是 **WSL**，所以服務必須在 WSL 內執行（Windows 上的程序它連不到，會是 502）。
 
+服務使用的程式碼就是 WSL 裡的 checkout（預設 `~/projects/YimmParking`，可用 `YIMM_SRC` 改），
+不要再指到 `/mnt/d/...`。
+
 ```bash
-cd web && pnpm build                       # Windows 上建置，產生 web/dist
-wsl -e bash /mnt/d/Projects/YimmParking/deploy/wsl-setup.sh   # 建 venv、複製 DB、啟動兩個 user service
+cd ~/projects/YimmParking/web && pnpm install --frozen-lockfile && pnpm build   # 在 WSL 建置，產生 web/dist
+bash ~/projects/YimmParking/deploy/wsl-setup.sh   # 建 venv、（必要時）複製 DB、寫入並啟動兩個 user service
 ```
 
 - `yimmparking-api`：同一個程序提供 API 與已建置的前端，監聽 `127.0.0.1:5173`。

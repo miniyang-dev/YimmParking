@@ -2,7 +2,11 @@
 # Run YimmParking inside WSL so the (WSL-hosted) cloudflared tunnel can reach it on localhost:5173.
 set -euo pipefail
 
-SRC=/mnt/d/Projects/YimmParking
+# The code the services run from: the checkout inside WSL (never /mnt/d — the tunnel and the services
+# live in WSL, and git, node_modules and file watching are far faster on the WSL filesystem).
+SRC="${YIMM_SRC:-$HOME/projects/YimmParking}"
+# Only used to seed an empty database on a fresh machine.
+SEED_DB="${YIMM_SEED_DB:-/mnt/d/Projects/YimmParking/backend/data/yimmparking.db}"
 BASE="$HOME/yimmparking"
 VENV="$BASE/venv"
 DATA="$BASE/data"
@@ -24,10 +28,14 @@ import fastapi, httpx, pydantic, uvicorn, sys
 print("python", sys.version.split()[0], "| fastapi", fastapi.__version__, "| pydantic", pydantic.__version__)
 PY
 
-echo "== 2. database (copied once from the Windows side so caches and quota counters carry over)"
+echo "== 2. database (seeded once so caches and quota counters carry over)"
 if [ ! -f "$DATA/yimmparking.db" ]; then
-  cp "$SRC/backend/data/yimmparking.db" "$DATA/yimmparking.db"
-  echo "copied"
+  if [ -f "$SEED_DB" ]; then
+    cp "$SEED_DB" "$DATA/yimmparking.db"
+    echo "copied from $SEED_DB"
+  else
+    echo "no seed database at $SEED_DB; starting empty (run: refresh-lots --yes)"
+  fi
 else
   echo "already present, left untouched"
 fi
