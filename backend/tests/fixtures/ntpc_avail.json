@@ -1,0 +1,66 @@
+[
+ {
+  "ID": "010116",
+  "AVAILABLECAR": "91"
+ },
+ {
+  "ID": "020213",
+  "AVAILABLECAR": "-9"
+ },
+ {
+  "ID": "030137",
+  "AVAILABLECAR": "-9"
+ },
+ {
+  "ID": "050193",
+  "AVAILABLECAR": "55"
+ },
+ {
+  "ID": "050259",
+  "AVAILABLECAR": "-9"
+ },
+ {
+  "ID": "060036",
+  "AVAILABLECAR": "211"
+ },
+ {
+  "ID": "060085",
+  "AVAILABLECAR": "31"
+ },
+ {
+  "ID": "060085",
+  "AVAILABLECAR": "31"
+ },
+ {
+  "ID": "060085",
+  "AVAILABLECAR": "31"
+ },
+ {
+  "ID": "100058",
+  "AVAILABLECAR": "36"
+ },
+ {
+  "ID": "110014",
+  "AVAILABLECAR": "14"
+ },
+ {
+  "ID": "160024",
+  "AVAILABLECAR": "-9"
+ },
+ {
+  "ID": "170120",
+  "AVAILABLECAR": "1325"
+ },
+ {
+  "ID": "170120",
+  "AVAILABLECAR": "1325"
+ },
+ {
+  "ID": "170120",
+  "AVAILABLECAR": "1325"
+ },
+ {
+  "ID": "060017",
+  "AVAILABLECAR": "176"
+ }
+]

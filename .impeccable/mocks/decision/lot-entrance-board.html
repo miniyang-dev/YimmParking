@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>示意圖 · 停車場價目看板 Lot Entrance Board</title>
+<style>
+  :root{
+    --board:#0b4da2; --board-deep:#083a7d; --board-line:#2f6dc0;
+    --paper:#ffffff; --ink:#0d1b2e; --cell:#ffd400; --cell-ink:#111;
+    --soft:#cfe0f6; --alert:#d7261e; --canvas:#e9ecf1;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--canvas);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color:var(--paper);padding:32px 16px 48px}
+  h1{font-size:15px;font-weight:600;color:#33415a;text-align:center;margin-bottom:6px}
+  p.note{font-size:13px;color:#5b6a82;text-align:center;margin-bottom:28px}
+  .stage{display:flex;gap:40px;justify-content:center;flex-wrap:wrap}
+  .phone{width:390px;height:844px;background:var(--board);border-radius:28px;overflow:hidden;position:relative;box-shadow:0 18px 40px rgba(10,30,60,.28),0 2px 6px rgba(10,30,60,.18)}
+  .phone::after{content:"";position:absolute;inset:8px;border:1.5px solid rgba(255,255,255,.55);border-radius:20px;pointer-events:none}
+  .scroll{height:100%;overflow:hidden;padding:22px 20px 0}
+  .label{font-size:12px;color:#5b6a82;text-align:center;margin-top:10px}
+
+  /* header */
+  .top{display:flex;align-items:center;gap:12px;margin:6px 4px 14px}
+  .pmark{width:44px;height:44px;border-radius:10px;background:var(--paper);color:var(--board);font-weight:900;font-size:30px;display:grid;place-items:center;line-height:1}
+  .name{font-weight:800;font-size:18px;letter-spacing:.02em;flex:1}
+  .lang{font-size:13px;font-weight:700;border:1.5px solid rgba(255,255,255,.7);border-radius:999px;padding:5px 11px}
+  .search{background:var(--paper);color:var(--ink);border-radius:12px;height:52px;display:flex;align-items:center;gap:10px;padding:0 14px;margin:0 4px}
+  .search span{flex:1;font-size:16px;font-weight:600}
+  .meta{display:flex;justify-content:space-between;align-items:center;margin:12px 6px 14px;font-size:13px;color:var(--soft)}
+  .seg{display:inline-flex;border:1.5px solid rgba(255,255,255,.75);border-radius:9px;overflow:hidden}
+  .seg b{font-weight:700;padding:5px 10px;font-size:13px;color:var(--paper)}
+  .seg b.on{background:var(--paper);color:var(--board)}
+
+  /* groups */
+  .band{display:flex;justify-content:space-between;align-items:baseline;background:var(--board-deep);margin:0 -20px;padding:7px 24px;font-size:13px;font-weight:700;color:var(--cell);letter-spacing:.04em}
+  .band.other{color:var(--soft)}
+  .band small{font-weight:600;color:var(--soft);font-size:12px}
+
+  /* rows: one price cell per lot */
+  .row{display:grid;grid-template-columns:1fr 86px;gap:12px;align-items:center;padding:13px 4px;border-bottom:1px solid var(--board-line)}
+  .row h3{font-size:16.5px;font-weight:700;line-height:1.25}
+  .row .sub{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:13px;color:var(--soft);flex-wrap:wrap}
+  .dist{font-weight:800;color:var(--paper);font-variant-numeric:tabular-nums}
+  .tag{font-size:11.5px;font-weight:700;border-radius:5px;padding:1.5px 6px;border:1.2px solid rgba(255,255,255,.75);color:var(--paper)}
+  .tag.ip{background:var(--paper);color:var(--board);border-color:var(--paper)}
+  .fee{font-size:13px;color:var(--soft);margin-top:4px}
+  .cell{height:60px;border-radius:9px;background:var(--cell);color:var(--cell-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+  .cell b{font-size:28px;font-weight:900;line-height:1}
+  .cell i{font-style:normal;font-size:11px;font-weight:700;margin-top:3px}
+  .cell.full{background:var(--alert);color:#fff}
+  .cell.none{background:transparent;border:2px dashed rgba(255,255,255,.7);color:var(--paper)}
+  .cell.none b{font-size:22px}
+  .cell.stale{border:2.5px dashed #111}
+  .cell.rough b::after{content:"?";font-size:15px;margin-left:2px}
+
+  /* detail */
+  .back{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin:6px 4px 14px}
+  .title{margin:0 4px 14px}
+  .title h2{font-size:25px;line-height:1.2;font-weight:800}
+  .title .sub{margin-top:8px;font-size:14px;color:var(--soft)}
+  .big{display:grid;grid-template-columns:132px 1fr;gap:14px;margin:0 4px 14px;align-items:stretch}
+  .big .cell{height:104px}
+  .big .cell b{font-size:54px}
+  .big .cell i{font-size:13px}
+  .facts{font-size:14px;line-height:1.5}
+  .facts div{padding:6px 0;border-bottom:1px solid var(--board-line)}
+  .facts dt{color:var(--soft);font-size:12px;font-weight:700}
+  .nav{margin:0 4px 16px;height:50px;border-radius:10px;background:var(--cell);color:#111;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+  .food h4{font-size:15px;font-weight:800;margin:0 4px 2px}
+  .food .src{font-size:12px;color:var(--soft);margin:0 4px 6px}
+  .dish{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 4px;border-bottom:1px solid var(--board-line)}
+  .dish h5{font-size:15px;font-weight:700}
+  .dish .m{font-size:12.5px;color:var(--soft);margin-top:3px;display:flex;gap:8px;align-items:center}
+  .rate{display:inline-flex;gap:3px;align-items:center;font-weight:700;color:var(--paper)}
+  svg{display:block}
+</style>
+</head>
+<body>
+<h1>示意圖 A · 停車場價目看板 Lot Entrance Board</h1>
+<p class="note">真實資料：2026-10-10 市府路 1 號附近查詢結果。美食為示意資料，實際來源 Google Places。</p>
+<div class="stage">
+
+  <!-- Screen 1: results -->
+  <div>
+  <div class="phone"><div class="scroll">
+    <div class="top">
+      <div class="pmark">P</div>
+      <div class="name">YimmParking</div>
+      <div class="lang">中 / EN</div>
+    </div>
+    <div class="search">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b4da2" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <span>台北市信義區市府路1號</span>
+    </div>
+    <div class="meta">
+      <span>1.5 公里內 · 資料 3 分鐘前</span>
+      <span class="seg"><b class="on">品牌優先</b><b>純距離</b></span>
+    </div>
+
+    <div class="band"><span>iParking 嘟嘟房</span><small>9 處</small></div>
+    <div class="row">
+      <div><h3>府前廣場地下停車場</h3>
+        <div class="sub"><span class="dist">191 m 南</span><span class="tag ip">iParking</span><span class="tag">嘟嘟房</span></div>
+        <div class="fee">30 元／時（09–18） · 24 小時</div></div>
+      <div class="cell"><b>984</b><i>空位</i></div>
+    </div>
+    <div class="row">
+      <div><h3>松壽廣場地下停車場</h3>
+        <div class="sub"><span class="dist">278 m 東</span><span class="tag ip">iParking</span><span class="tag">嘟嘟房</span></div>
+        <div class="fee">30 元／時（平日 09–22） · 24 小時</div></div>
+      <div class="cell"><b>373</b><i>空位</i></div>
+    </div>
+    <div class="row">
+      <div><h3>國父紀念館-忠孝站</h3>
+        <div class="sub"><span class="dist">576 m 西北</span><span class="tag ip">iParking</span><span class="tag">嘟嘟房</span></div>
+        <div class="fee">80 元／時 · 未滿 10 分鐘免費</div></div>
+      <div class="cell"><b>57</b><i>空位</i></div>
+    </div>
+    <div class="band" style="margin-top:2px"><span>台灣聯通・嘟嘟房</span><small>3 處</small></div>
+    <div class="row">
+      <div><h3>嘟嘟房瀚寓酒店站</h3>
+        <div class="sub"><span class="dist">268 m 北</span><span class="tag">嘟嘟房</span></div>
+        <div class="fee">120 元／時 · 24 小時</div></div>
+      <div class="cell"><b>16</b><i>空位</i></div>
+    </div>
+    <div class="band other"><span>其他停車場</span><small>8 處</small></div>
+    <div class="row">
+      <div><h3>台北君悅酒店停車場</h3>
+        <div class="sub"><span class="dist">188 m 南</span></div>
+        <div class="fee">80 元／時 · 24 小時</div></div>
+      <div class="cell"><b>253</b><i>空位</i></div>
+    </div>
+  </div></div>
+  <div class="label">① 查詢結果（品牌優先，每列只講一件事：空位）</div>
+  </div>
+
+  <!-- Screen 2: lot detail + food within 1 km -->
+  <div>
+  <div class="phone"><div class="scroll">
+    <div class="back">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      回到清單
+    </div>
+    <div class="title">
+      <h2>府前廣場地下停車場</h2>
+      <div class="sub">信義區 · 191 m 南 · <span class="tag ip">iParking</span> <span class="tag">嘟嘟房</span></div>
+    </div>
+    <div class="big">
+      <div class="cell"><b>984</b><i>空位 · 3 分鐘前</i></div>
+      <dl class="facts">
+        <div><dt>費率</dt>30 元／時（09–18）<br>10 元／時（18–09）</div>
+        <div><dt>營業</dt>24 小時 · 共 1,998 格</div>
+      </dl>
+    </div>
+    <div class="nav">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+      用 Google 地圖導航
+    </div>
+    <div class="band" style="margin-top:6px"><span>周圍 1 公里的美食</span><small>示意資料</small></div>
+    <div class="food">
+      <div class="dish"><div><h5>示意・牛肉麵店 A</h5><div class="m"><span>牛肉麵</span><span>步行 3 分鐘</span><span>營業中</span></div></div>
+        <div style="text-align:right"><div class="dist">210 m</div>
+        <div class="rate"><svg width="13" height="13" viewBox="0 0 24 24" fill="#ffd400"><path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z"/></svg>4.5</div></div></div>
+      <div class="dish"><div><h5>示意・日式拉麵 B</h5><div class="m"><span>拉麵</span><span>步行 5 分鐘</span><span>營業中</span></div></div>
+        <div style="text-align:right"><div class="dist">380 m</div>
+        <div class="rate"><svg width="13" height="13" viewBox="0 0 24 24" fill="#ffd400"><path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z"/></svg>4.3</div></div></div>
+      <div class="dish"><div><h5>示意・咖啡與早午餐 C</h5><div class="m"><span>早午餐</span><span>步行 9 分鐘</span><span>11:00 營業</span></div></div>
+        <div style="text-align:right"><div class="dist">690 m</div>
+        <div class="rate"><svg width="13" height="13" viewBox="0 0 24 24" fill="#ffd400"><path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z"/></svg>4.6</div></div></div>
+    </div>
+  </div></div>
+  <div class="label">② 選了停車場之後：周圍 1 公里的美食（距離從該停車場算起）</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T16:10:00Z",
+  "title": "Design System: YimmParking",
+  "extensions": {
+    "colorMeta": {
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "#ffffff", "tonalRamp": ["#161412", "#2b2825", "#4b473f", "#7a756a", "#a8a398", "#cfccc2", "#e7e8e2", "#ffffff"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#161412", "tonalRamp": ["#161412", "#2b2825", "#403c37", "#57534c", "#6f6a62", "#8b867c", "#aaa59a", "#cfccc2"] },
+      "course-purple": { "role": "primary", "displayName": "Course Purple", "canonical": "#b21a8f", "tonalRamp": ["#4a0b3b", "#6b1056", "#8a1572", "#b21a8f", "#c6479f", "#d977b9", "#e8a6d3", "#f5d5ea"] },
+      "open-land": { "role": "secondary", "displayName": "Open-Land Yellow", "canonical": "#f7dc55", "tonalRamp": ["#3e3611", "#6b5d0c", "#9a8610", "#c7ad1b", "#f7dc55", "#f9e582", "#fbefaf", "#fdf7d7"] },
+      "water-blue": { "role": "tertiary", "displayName": "Water Blue", "canonical": "#1c5fae", "tonalRamp": ["#0c2a4d", "#10407a", "#1c5fae", "#4a82c3", "#78a5d6", "#a5c6e6", "#d0e2f3", "#eaf2fa"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Lot name", "purpose": "The opened lot's name." },
+      "numeral": { "displayName": "Control numeral", "purpose": "Spaces left, row number and detail figures; condensed, tabular." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "row-hover", "value": "background-color 120ms ease-out", "purpose": "The only transition: a row tint on hover; disabled under reduced motion." }
+    ],
+    "breakpoints": [
+      { "name": "frame", "value": "560px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Navigate out to Google Maps. The only purple fill on a screen.",
+      "html": "<a class=\"ds-go\" href=\"#\">用 Google 地圖導航</a>",
+      "css": ".ds-go{display:flex;align-items:center;justify-content:center;min-height:48px;background:#b21a8f;color:#fff;font-weight:800;font-size:16px;text-decoration:none}.ds-go:hover{filter:brightness(1.08)}.ds-go:focus-visible{outline:3px solid #b21a8f;outline-offset:2px}"
+    },
+    {
+      "name": "Address field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Address entry led by the purple start triangle, attached to an ink submit cell.",
+      "html": "<form class=\"ds-field\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 26 26\" fill=\"none\" stroke=\"#b21a8f\" stroke-width=\"2.2\" stroke-linejoin=\"round\"><path d=\"M13 3.5 23 21.5H3z\"/></svg><input placeholder=\"輸入地址\" value=\"市府路1號\"><button type=\"button\">搜尋</button></form>",
+      "css": ".ds-field{display:flex;align-items:center;gap:8px;height:52px;padding-left:12px;background:#fff;border:1.6px solid #161412}.ds-field input{flex:1;min-width:0;height:100%;border:0;background:transparent;font:600 16px system-ui;outline:none}.ds-field button{align-self:stretch;padding:0 16px;border:0;border-left:1.6px solid #161412;background:#161412;color:#fff;font-weight:800}.ds-field:focus-within{outline:3px solid #b21a8f;outline-offset:2px}"
+    },
+    {
+      "name": "Group band",
+      "kind": "custom",
+      "refersTo": "band-preferred",
+      "description": "Open-land yellow band that opens the preferred-brand group.",
+      "html": "<div class=\"ds-band\"><span>優先：iParking 嘟嘟房</span><small>9 處</small></div>",
+      "css": ".ds-band{display:flex;justify-content:space-between;align-items:baseline;padding:7px 16px;background:#f7dc55;color:#161412;border-top:1.5px solid #161412;border-bottom:1.5px solid #161412;font-size:13px;font-weight:800}.ds-band small{font-weight:600;font-size:12px}"
+    },
+    {
+      "name": "Spaces cell",
+      "kind": "custom",
+      "refersTo": "spaces-cell",
+      "description": "Remaining spaces. Variants: known, old (green hatch), full (black hatch), no data (dot screen).",
+      "html": "<div class=\"ds-cell\"><b>984</b><span>空位</span></div>",
+      "css": ".ds-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;width:94px;min-height:62px;border-left:1px solid #161412;font-variant-numeric:tabular-nums}.ds-cell b{font:800 30px/1 'Barlow Condensed',system-ui}.ds-cell span{margin-top:3px;font-size:11px;font-weight:700;color:#4b473f}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Control Description Sheet",
+    "overview": "Every result is a numbered control on an orienteering map's description sheet. The destination is the start triangle, each parking lot is a control with a symbol, and the lot you open is the one the purple course runs to. It refuses the category's white card with a blue button: nothing floats, structure is carried by rules and state by texture and text.",
+    "keyCharacteristics": [
+      "Ruled grid table as the main surface; the list is the product.",
+      "Colour is an ink with a single job, and each job has a non-colour backup.",
+      "One condensed numeral face for every figure read at a glance.",
+      "Flat by default: no shadows, no radius beyond 3px.",
+      "Light and dark are the same sheet printed on white and on night paper."
+    ],
+    "rules": [
+      { "name": "The One Course Rule", "body": "Purple marks the route and nothing else. If two things on a screen are purple, one of them is wrong.", "section": "colors" },
+      { "name": "The Ink-With-A-Job Rule", "body": "Every colour answers one question. A colour that answers none is removed, not recoloured.", "section": "colors" },
+      { "name": "The No-Colour-Alone Rule", "body": "State must survive greyscale: symbol shape, hatch direction, dot screen, or words carry it.", "section": "colors" },
+      { "name": "The Numerals-Are-Condensed Rule", "body": "Any figure read at a glance uses the condensed numeral face; running prose never does.", "section": "typography" },
+      { "name": "The Flat-Sheet Rule", "body": "If something needs to stand out, give it a rule or a texture. A shadow is never the answer.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep purple to the route: start triangle, opened lot, course line, primary action, focus ring.",
+      "Do state age next to any count that is older than a few minutes.",
+      "Do use hatches and dot screens for state, with words as the backup.",
+      "Do keep every control at least 44px tall.",
+      "Do verify both light and dark."
+    ],
+    "donts": [
+      "Don't put a shadow, gradient, glass or rounded card anywhere.",
+      "Don't show \"no data\" as zero, or a stale reading as fresh.",
+      "Don't use blue for anything but links that leave for an outside map.",
+      "Don't add a second accent colour for decoration.",
+      "Don't embed a map: Google content must not be combined with a non-Google map."
+    ]
+  }
+}

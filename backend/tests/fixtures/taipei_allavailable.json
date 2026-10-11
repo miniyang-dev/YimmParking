@@ -1,0 +1,624 @@
+{
+ "data": {
+  "UPDATETIME": "Sat Oct 10 22:37:00 CST 2026",
+  "park": [
+   {
+    "id": "TPE0001",
+    "availablecar": 6,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": -9,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9
+   },
+   {
+    "id": "TPE0002",
+    "availablecar": 254,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": 0,
+    "availablepregnancy": 0,
+    "availableheavymotor": -9
+   },
+   {
+    "id": "TPE0005",
+    "availablecar": 1251,
+    "availablemotor": 0,
+    "availablebus": 0,
+    "availablehandicap": 0,
+    "availablepregnancy": 0,
+    "availableheavymotor": 0
+   },
+   {
+    "id": "TPE0050",
+    "availablecar": 263,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": 2,
+    "availablepregnancy": 2,
+    "availableheavymotor": -9
+   },
+   {
+    "id": "TPE0313",
+    "availablecar": 8,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": 5,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9
+   },
+   {
+    "id": "TPE0367",
+    "availablecar": 10,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": -9,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9
+   },
+   {
+    "id": "TPE0011",
+    "availablecar": 292,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": 2,
+    "availablepregnancy": 5,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "28371994-CTP4340001",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340002",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340003",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340004",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340005",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340006",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340007",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340008",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP4340009",
+       "spot_status": "充電中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0051",
+    "availablecar": 33,
+    "availablemotor": 169,
+    "availablebus": -9,
+    "availablehandicap": 0,
+    "availablepregnancy": 0,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "28371994-CTP5410001",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP5410002",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP5410003",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "28371994-CTP5410004",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28371994-CTP5410005",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "28371994-CTP5410006",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "28371994-CTP5410007",
+       "spot_status": "充電中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0027",
+    "availablecar": 86,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": -9,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9
+   },
+   {
+    "id": "TPE0003",
+    "availablecar": 121,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": 0,
+    "availablepregnancy": 4,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "85051710-C3707",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3708",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "85051710-C3709",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3710",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3711",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3712",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3865",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3866",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3867",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3868",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3869",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3870",
+       "spot_status": "待機中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0006",
+    "availablecar": 185,
+    "availablemotor": 825,
+    "availablebus": -9,
+    "availablehandicap": 2,
+    "availablepregnancy": 0,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "28652185-CEMEI1025",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI1026",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI1027",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI1028",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI4025",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI4026",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI4038",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI4039",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI4081",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "28652185-CEMEI4082",
+       "spot_status": "待機中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0007",
+    "availablecar": 41,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": -9,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "93158315-CA053001_4",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "93158315-CA053001_5",
+       "spot_status": "待機中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0008",
+    "availablecar": 44,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": 0,
+    "availablepregnancy": 1,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "28652185-CTPBN0030",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "28652185-CTPBN0031",
+       "spot_status": "待機中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0009",
+    "availablecar": 0,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": -9,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "85051710-C3854",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "85051710-C3855",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3976",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3995",
+       "spot_status": "充電中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0010",
+    "availablecar": 495,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": 2,
+    "availablepregnancy": 7,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "90807408-CCP03116",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03117",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03118",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03119",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03120",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03121",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03122",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03123",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03124",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03125",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03126",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03127",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03128",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03129",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03130",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03131",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03132",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03133",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03134",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03135",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03136",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03137",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03138",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03139",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03140",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03141",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03142",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03143",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03144",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03145",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03146",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03147",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03148",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03149",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03150",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03151",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03152",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03153",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03162",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03163",
+       "spot_status": "充電中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03164",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03165",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03166",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03167",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03168",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "90807408-CCP03169",
+       "spot_status": "待機中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0040",
+    "availablecar": -9,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": -9,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "94175832-C1b2967474b881",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "94175832-Cd8778b6ce2e91",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "94175832-Cf60cd1a0e55c1",
+       "spot_status": "待機中"
+      }
+     ]
+    }
+   },
+   {
+    "id": "TPE0108",
+    "availablecar": -9,
+    "availablemotor": -9,
+    "availablebus": -9,
+    "availablehandicap": -9,
+    "availablepregnancy": -9,
+    "availableheavymotor": -9,
+    "ChargeStation": {
+     "scoketStatusList": [
+      {
+       "spot_abrv": "85051710-C3780",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3781",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3782",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3783",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3784",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3785",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3930",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3931",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3932",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3933",
+       "spot_status": "待機中"
+      },
+      {
+       "spot_abrv": "85051710-C3934",
+       "spot_status": "待機中"
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

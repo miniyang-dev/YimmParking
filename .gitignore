@@ -1,0 +1,30 @@
+# Python
+backend/.venv/
+backend/data/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+web/dist/
+web/.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# impeccable ephemeral state
+.impeccable/questions/
+.impeccable/build/
+.impeccable/review/
