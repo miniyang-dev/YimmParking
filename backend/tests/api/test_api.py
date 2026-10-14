@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import pytest
@@ -21,10 +22,13 @@ from yimmparking.application.limits import (
 )
 from yimmparking.application.refresh import RefreshAvailability, RefreshLots
 from yimmparking.application.search import ResolveAddress, SearchNearbyFood, SearchNearbyParking
+from yimmparking.application.search_bikes import SearchNearbyBikes
 from yimmparking.domain.geo import GeoPoint
+from yimmparking.application.ports import SourceError
 from yimmparking.domain.model import (
     AvailabilityBatch,
     AvailabilityReading,
+    BikeStation,
     City,
     IParkingStation,
     ParkingLot,
@@ -80,6 +84,7 @@ def build(
     *,
     places_limit: int = 900,
     router: object | None = None,
+    bike_feeds: list[Any] | None = None,
 ) -> Container:
     http = httpx.Client(transport=transport or httpx.MockTransport(lambda r: httpx.Response(500)))
     store = SqliteStore(":memory:")
@@ -124,6 +129,7 @@ def build(
         search_parking=SearchNearbyParking(store, Clock(), router=router),  # type: ignore[arg-type]
         resolve_address=ResolveAddress(geocoder, store, Clock()),
         search_food=SearchNearbyFood(places),
+        search_bikes=SearchNearbyBikes(bike_feeds or [], Clock()),
         usage=usage,
         router=router,  # type: ignore[arg-type]
     )
@@ -359,6 +365,62 @@ def test_travel_times_reorder_results_by_walking_time() -> None:
         assert "bike_seconds" not in first
         assert first["distance_m"] > 0  # the straight-line figure is still reported
     container.close()
+
+
+class _BikeFeed:
+    city = City.TAIPEI
+
+    def __init__(self, stations: list[BikeStation] | Exception) -> None:
+        self._stations = stations
+
+    def fetch_stations(self) -> list[BikeStation]:
+        if isinstance(self._stations, Exception):
+            raise self._stations
+        return self._stations
+
+
+def _bike(sno: str, lat: float, rent: int | None = 4) -> BikeStation:
+    return BikeStation(
+        id=f"taipei:{sno}",
+        city=City.TAIPEI,
+        name=f"站{sno}",
+        address="某路",
+        location=GeoPoint(lat, CENTER.lng),
+        active=True,
+        rent=rent,
+        ret=6,
+        observed_at=NOW,
+    )
+
+
+def test_bikes_nearby_lists_stations_by_distance() -> None:
+    feed = _BikeFeed([_bike("far", CENTER.lat + 0.003), _bike("near", CENTER.lat + 0.001, rent=0)])
+    container = build("k", bike_feeds=[feed])
+    with TestClient(create_app(container=container)) as c:
+        body = c.get("/api/v1/bikes/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}).json()
+    container.close()
+    assert (body["radius_m"], body["expanded"]) == (400, False)
+    assert [r["name"] for r in body["results"]] == ["站near", "站far"]
+    near = body["results"][0]
+    assert near["rent"] == 0 and near["ret"] == 6  # zero is a real reading, not "no data"
+    assert 100 <= near["distance_m"] <= 120
+
+
+def test_bikes_nearby_widens_and_reports_it() -> None:
+    container = build("k", bike_feeds=[_BikeFeed([_bike("a", CENTER.lat + 0.005)])])  # ~556 m
+    with TestClient(create_app(container=container)) as c:
+        body = c.get("/api/v1/bikes/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}).json()
+    container.close()
+    assert (body["radius_m"], body["expanded"], len(body["results"])) == (800, True, 1)
+
+
+def test_bikes_nearby_says_unavailable_when_the_feed_is_down() -> None:
+    container = build("k", bike_feeds=[_BikeFeed(SourceError("down"))])
+    with TestClient(create_app(container=container)) as c:
+        r = c.get("/api/v1/bikes/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng})
+    container.close()
+    assert r.status_code == 502
+    assert r.json()["error"]["code"] == "bikes_unavailable"
 
 
 def test_food_accepts_the_search_origin(client: TestClient) -> None:

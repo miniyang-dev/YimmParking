@@ -117,6 +117,25 @@ class FoodSearchResponse(BaseModel):
     attribution: str = "Google Maps"
 
 
+class BikeStationDTO(BaseModel):
+    id: str
+    name: str
+    address: str
+    lat: float
+    lng: float
+    distance_m: int = Field(description="Straight-line distance from the query point")
+    rent: int | None = Field(description="Bikes that can be taken; null = no reading")
+    ret: int | None = Field(description="Free docks; null = no reading")
+    observed_at: datetime | None = Field(description="When the feed says the reading was taken")
+
+
+class BikeSearchResponse(BaseModel):
+    origin: OriginDTO
+    radius_m: int = Field(description="The radius that was searched (400, or 800 if widened)")
+    expanded: bool = Field(description="True when nothing was within 400 m so 800 m was used")
+    results: list[BikeStationDTO]
+
+
 class SourceStatusDTO(BaseModel):
     city: Literal["taipei", "new_taipei"]
     lots: int

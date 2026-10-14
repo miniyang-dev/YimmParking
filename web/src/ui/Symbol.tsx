@@ -1,4 +1,4 @@
-export type SymbolKind = "start" | "iparking" | "circle" | "cross";
+export type SymbolKind = "start" | "iparking" | "circle" | "cross" | "station";
 
 interface Props {
   kind: SymbolKind;
@@ -34,6 +34,12 @@ export function Symbol({ kind, size = 26, className }: Props) {
       )}
       {kind === "circle" && <circle cx="13" cy="13" r="10" />}
       {kind === "cross" && <path d="M7 7l12 12M19 7 7 19" />}
+      {kind === "station" && (
+        <>
+          <path d="M13 3 23 13 13 23 3 13Z" />
+          <circle cx="13" cy="13" r="1.8" fill="currentColor" stroke="none" />
+        </>
+      )}
     </svg>
   );
 }

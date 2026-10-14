@@ -18,8 +18,10 @@ from yimmparking.application.ports import (
     GeocodingUnavailable,
     PlacesError,
     QuotaExceeded,
+    SourceError,
 )
 from yimmparking.application.search import FoodHit, ParkingHit
+from yimmparking.application.search_bikes import BikeHit
 from yimmparking.domain.fee import hourly_car_rate
 from yimmparking.domain.food_category import category_of
 from yimmparking.domain.geo import GeoPoint, initial_bearing_deg
@@ -31,6 +33,8 @@ from yimmparking.interface.container import Container, build_container
 from yimmparking.interface.schemas import (
     AlternativeDTO,
     AvailabilityDTO,
+    BikeSearchResponse,
+    BikeStationDTO,
     ErrorResponse,
     FoodDTO,
     FoodSearchResponse,
@@ -139,6 +143,21 @@ def to_food_dto(hit: FoodHit) -> FoodDTO:
         category=category_of(p.primary_type_code).value,
         open_now=p.open_now,
         maps_uri=p.maps_uri,
+    )
+
+
+def to_bike_dto(hit: BikeHit) -> BikeStationDTO:
+    s = hit.station
+    return BikeStationDTO(
+        id=s.id,
+        name=s.name,
+        address=s.address,
+        lat=s.location.lat,
+        lng=s.location.lng,
+        distance_m=round(hit.distance_m),
+        rent=s.rent,
+        ret=s.ret,
+        observed_at=s.observed_at,
     )
 
 
@@ -300,6 +319,19 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             results=[to_food_dto(h) for h in found.hits],
             min_rating=found.min_rating,
             min_reviews=found.min_reviews,
+        )
+
+    @app.get("/api/v1/bikes/nearby", response_model=BikeSearchResponse, responses=responses)
+    def bikes_nearby(lat: Lat, lng: Lng) -> BikeSearchResponse:
+        try:
+            found = c().search_bikes.execute(GeoPoint(lat, lng))
+        except SourceError as exc:
+            raise ApiError(502, "bikes_unavailable", str(exc)) from exc
+        return BikeSearchResponse(
+            origin=OriginDTO(lat=lat, lng=lng),
+            radius_m=found.radius_m,
+            expanded=found.expanded,
+            results=[to_bike_dto(h) for h in found.hits],
         )
 
     def _search(

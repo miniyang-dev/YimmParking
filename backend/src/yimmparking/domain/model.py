@@ -132,6 +132,25 @@ class IParkingStation:
 
 
 @dataclass(frozen=True, slots=True)
+class BikeStation:
+    """A YouBike station. Passed through from the feed, never persisted.
+
+    `rent` / `ret` are None when the feed gave no usable reading: that is "no data", not zero.
+    """
+
+    id: str  # "<city>:<source id>"
+    city: City
+    name: str
+    address: str
+    location: GeoPoint
+    active: bool
+    rent: int | None = None  # bikes that can be taken now
+    ret: int | None = None  # free docks that can take a bike back
+    total: int | None = None
+    observed_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class AvailabilityReading:
     """One raw reading from a source feed, before it is joined to a lot."""
 

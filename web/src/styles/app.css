@@ -1000,6 +1000,108 @@ a {
   color: var(--muted);
 }
 
+/* ---- nearby YouBike ------------------------------------------------------------------ */
+
+.bikes {
+  margin-top: var(--space-4);
+}
+
+.bikes__head th {
+  padding: 5px var(--space-3);
+  background: var(--head);
+  border-bottom: 1px solid var(--rule);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  color: var(--muted);
+}
+
+.bikes__head th:nth-child(2),
+.bikes__head th:nth-child(3) {
+  text-align: center;
+  padding-inline: 0;
+}
+
+.bikes__row .lots__main a {
+  text-decoration: none;
+}
+
+.bikes__name {
+  color: var(--ink);
+}
+
+.bikes__go {
+  width: 56px;
+  padding: 0;
+  border-left: 1px solid var(--rule-soft);
+}
+
+.bikes__go-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 62px;
+  color: var(--water);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bikes__widened {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--head);
+  border-bottom: 1px solid var(--rule);
+}
+
+.bikes__rings {
+  width: 112px;
+  height: 112px;
+}
+
+.bikes__outer {
+  fill: none;
+  stroke: var(--rule);
+  stroke-width: 1.6;
+}
+
+.bikes__dot {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.bikes__widened-title {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.bikes__hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.bikes__skeleton {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.bikes__skeleton .skeleton {
+  height: 28px;
+}
+
 .lots--food .lots__no {
   font-family: var(--font-text);
   font-size: 15px;

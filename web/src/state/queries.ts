@@ -44,6 +44,20 @@ export function useParkingSearch(route: Route, vendors: string) {
   });
 }
 
+/**
+ * YouBike stations near a lot. Free government data, so unlike food it may retry once and
+ * refetch; the server holds the feed for a minute, so asking more often gains nothing.
+ */
+export function useBikes(lat: number, lng: number) {
+  return useQuery({
+    queryKey: ["bikes", lat.toFixed(5), lng.toFixed(5)],
+    queryFn: ({ signal }) => api.bikes(lat, lng, signal),
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    retry: retryFree,
+  });
+}
+
 /** Food is Google content: only held in memory briefly, never persisted. */
 export function useFood(
   lat: number,

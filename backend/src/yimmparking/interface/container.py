@@ -17,6 +17,7 @@ from yimmparking.adapters.routes.google_routes import ENDPOINT as ROUTES_ENDPOIN
 from yimmparking.adapters.routes.google_routes import GoogleRoutes
 from yimmparking.adapters.sources.new_taipei import NewTaipeiFeed
 from yimmparking.adapters.sources.taipei import TaipeiFeed
+from yimmparking.adapters.sources.youbike import NewTaipeiBikeFeed, TaipeiBikeFeed
 from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.application.limits import (
     GEOCODING,
@@ -42,6 +43,7 @@ from yimmparking.application.search import (
     SearchNearbyFood,
     SearchNearbyParking,
 )
+from yimmparking.application.search_bikes import SearchNearbyBikes
 from yimmparking.interface.settings import Settings
 
 
@@ -59,6 +61,7 @@ class Container:
     search_parking: SearchNearbyParking
     resolve_address: ResolveAddress
     search_food: SearchNearbyFood
+    search_bikes: SearchNearbyBikes
     usage: UsageGate
     router: TravelRouter | None
 
@@ -144,6 +147,7 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
             min_reviews=settings.food_min_reviews,
             clock=clock,
         ),
+        search_bikes=SearchNearbyBikes([TaipeiBikeFeed(http), NewTaipeiBikeFeed(http)], clock),
         usage=usage,
         router=router,
     )

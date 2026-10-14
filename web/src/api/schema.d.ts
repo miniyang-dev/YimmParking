@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bikes/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bikes Nearby */
+        get: operations["bikes_nearby_api_v1_bikes_nearby_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -109,6 +126,55 @@ export interface components {
              * @description Reading exceeds the lot's listed capacity; treat as rough
              */
             suspect: boolean;
+        };
+        /** BikeSearchResponse */
+        BikeSearchResponse: {
+            origin: components["schemas"]["OriginDTO"];
+            /**
+             * Radius M
+             * @description The radius that was searched (400, or 800 if widened)
+             */
+            radius_m: number;
+            /**
+             * Expanded
+             * @description True when nothing was within 400 m so 800 m was used
+             */
+            expanded: boolean;
+            /** Results */
+            results: components["schemas"]["BikeStationDTO"][];
+        };
+        /** BikeStationDTO */
+        BikeStationDTO: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address: string;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+            /**
+             * Distance M
+             * @description Straight-line distance from the query point
+             */
+            distance_m: number;
+            /**
+             * Rent
+             * @description Bikes that can be taken; null = no reading
+             */
+            rent: number | null;
+            /**
+             * Ret
+             * @description Free docks; null = no reading
+             */
+            ret: number | null;
+            /**
+             * Observed At
+             * @description When the feed says the reading was taken
+             */
+            observed_at: string | null;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -577,6 +643,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FoodSearchResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bikes_nearby_api_v1_bikes_nearby_get: {
+        parameters: {
+            query: {
+                /** @description WGS84 latitude (Taiwan) */
+                lat: number;
+                /** @description WGS84 longitude (Taiwan) */
+                lng: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BikeSearchResponse"];
                 };
             };
             /** @description Not Found */

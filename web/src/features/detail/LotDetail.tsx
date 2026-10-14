@@ -20,6 +20,7 @@ import type { StringKey } from "../../i18n/strings";
 import { useFood } from "../../state/queries";
 import { useSpin } from "../../state/useSpin";
 import { SpaceCell } from "../../ui/SpaceCell";
+import { BikeSection } from "./BikeSection";
 import { Symbol } from "../../ui/Symbol";
 import { feeHeadline, symbolFor } from "../results/ResultSheet";
 
@@ -472,6 +473,8 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
       </a>
       <p className="go__from">{t("detail.navFrom", { origin: originLabel })}</p>
 
+
+      <BikeSection key={`bikes-${lot.id}`} lot={lot} now={now} />
 
       <FoodSection key={lot.id} lot={lot} origin={origin} originLabel={originLabel} />
 

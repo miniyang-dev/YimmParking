@@ -1,5 +1,5 @@
 import type { components } from "./schema";
-import type { FoodResponse, SearchResponse, SortMode } from "../domain/types";
+import type { BikeResponse, FoodResponse, SearchResponse, SortMode } from "../domain/types";
 
 export class ApiError extends Error {
   constructor(
@@ -48,6 +48,9 @@ export const api = {
 
   nearby: (lat: number, lng: number, mode: SortMode, vendors: string, signal?: AbortSignal) =>
     getJson<SearchResponse>("/api/v1/parking/nearby", { lat, lng, mode, vendors }, signal),
+
+  bikes: (lat: number, lng: number, signal?: AbortSignal) =>
+    getJson<BikeResponse>("/api/v1/bikes/nearby", { lat, lng }, signal),
 
   food: (
     lat: number,

@@ -11,6 +11,7 @@ from typing import Protocol
 from yimmparking.domain.geo import BoundingBox, GeoPoint
 from yimmparking.domain.model import (
     AvailabilityBatch,
+    BikeStation,
     City,
     GeocodeCandidate,
     IParkingStation,
@@ -63,6 +64,14 @@ class ParkingFeed(Protocol):
     def fetch_lots(self) -> list[ParkingLot]: ...
 
     def fetch_availability(self) -> AvailabilityBatch: ...
+
+
+class BikeFeed(Protocol):
+    """One city's real-time YouBike station feed."""
+
+    city: City
+
+    def fetch_stations(self) -> list[BikeStation]: ...
 
 
 class IParkingDirectory(Protocol):
