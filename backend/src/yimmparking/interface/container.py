@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ssl
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -74,12 +75,37 @@ class Container:
         self.store.close()
 
 
-def build_container(settings: Settings, *, http: httpx.Client | None = None) -> Container:
-    http = http or httpx.Client(
+# data.ntpc.gov.tw's certificate has no Subject Key Identifier, which the strict X.509 profile that
+# Python 3.13+ enables by default rejects; every 新北市 feed failed on it. Only this host is
+# relaxed: any other host keeps the default strict verification.
+RELAXED_TLS_HOSTS = ("data.ntpc.gov.tw",)
+
+
+def relaxed_tls_context() -> ssl.SSLContext:
+    """The default verifying context minus the strict X.509 profile.
+
+    The chain and the host name are still verified; only the extra RFC 5280 extension checks
+    are skipped.
+    """
+    context = ssl.create_default_context()
+    context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return context
+
+
+def build_http_client(user_agent: str) -> httpx.Client:
+    relaxed = relaxed_tls_context()
+    return httpx.Client(
         timeout=httpx.Timeout(20.0),
         follow_redirects=True,
-        headers={"User-Agent": settings.user_agent},
+        headers={"User-Agent": user_agent},
+        mounts={
+            f"https://{host}": httpx.HTTPTransport(verify=relaxed) for host in RELAXED_TLS_HOSTS
+        },
     )
+
+
+def build_container(settings: Settings, *, http: httpx.Client | None = None) -> Container:
+    http = http or build_http_client(settings.user_agent)
     clock = SystemClock()
     store = SqliteStore(settings.db_path)
 
