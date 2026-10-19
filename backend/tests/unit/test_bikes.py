@@ -58,8 +58,8 @@ class Clock:
 
 
 class Feed:
-    def __init__(self, stations: list[BikeStation] | Exception) -> None:
-        self.city = City.TAIPEI
+    def __init__(self, stations: list[BikeStation] | Exception, city: City = City.TAIPEI) -> None:
+        self.city = city
         self.stations = stations
         self.calls = 0
 
@@ -192,3 +192,32 @@ def test_failed_refresh_serves_the_last_copy_for_a_while_then_errors() -> None:
 def test_first_load_failure_is_an_error() -> None:
     with pytest.raises(SourceError):
         SearchNearbyBikes([Feed(SourceError("down"))], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+
+
+def test_one_city_down_still_lists_the_other_and_says_which_is_missing() -> None:
+    taipei = Feed([station("a", 50)])
+    new_taipei = Feed(SourceError("down"), city=City.NEW_TAIPEI)
+    found = SearchNearbyBikes([taipei, new_taipei], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+    assert [h.station.name for h in found.hits] == ["a"]
+    assert found.missing == (City.NEW_TAIPEI,)
+
+
+def test_nothing_missing_when_every_feed_reads() -> None:
+    found = SearchNearbyBikes([Feed([station("a", 50)])], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+    assert found.missing == ()
+
+
+def test_a_failed_feed_is_not_asked_again_until_the_ttl_passes() -> None:
+    taipei = Feed([station("a", 50)])
+    new_taipei = Feed(SourceError("down"), city=City.NEW_TAIPEI)
+    clock = Clock()
+    search = SearchNearbyBikes([taipei, new_taipei], clock)  # type: ignore[list-item]
+    for _ in range(3):
+        search.execute(ORIGIN)
+    assert new_taipei.calls == 1  # an outage does not make every request wait for it
+
+    clock.at = NOW + timedelta(seconds=61)
+    new_taipei.stations = [station("b", 80)]
+    found = search.execute(ORIGIN)
+    assert new_taipei.calls == 2
+    assert found.missing == ()

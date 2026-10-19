@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 from yimmparking.application.ports import BikeFeed, Clock, SourceError
 from yimmparking.domain.geo import GeoPoint, haversine_m
-from yimmparking.domain.model import BikeStation
+from yimmparking.domain.model import BikeStation, City
 
 log = logging.getLogger(__name__)
 
@@ -38,39 +38,60 @@ class BikeSearchResult:
     radius_m: int
     expanded: bool  # True when the first radius was empty and a wider one was used
     hits: tuple[BikeHit, ...]
+    # Cities whose feed could not be read: their stations are missing from `hits`, so an empty
+    # or short list is not proof that there is no station nearby.
+    missing: tuple[City, ...] = ()
 
 
 class SearchNearbyBikes:
     def __init__(self, feeds: list[BikeFeed], clock: Clock, ttl: timedelta = FEED_TTL) -> None:
         self._feeds, self._clock, self._ttl = feeds, clock, ttl
         self._cache: dict[int, tuple[datetime, list[BikeStation]]] = {}
+        # When a feed last failed: it is not asked again until `ttl` has passed, so an outage
+        # does not make every request wait for the same timeout.
+        self._failed_at: dict[int, datetime] = {}
         self._lock = threading.Lock()
 
-    def _stations(self) -> list[BikeStation]:
+    def _feed_stations(self, i: int, feed: BikeFeed, now: datetime) -> list[BikeStation] | None:
+        """This feed's stations (fresh, or a recent copy), or None when it has nothing usable."""
+        cached = self._cache.get(i)
+        failed = self._failed_at.get(i)
+        due = cached is None or now - cached[0] >= self._ttl
+        backing_off = failed is not None and now - failed < self._ttl
+        if due and not backing_off:
+            try:
+                cached = (now, feed.fetch_stations())
+                self._cache[i] = cached
+                self._failed_at.pop(i, None)
+            except SourceError as exc:
+                self._failed_at[i] = now
+                log.warning("bikes %s: refresh failed: %s", feed.city, exc)
+        if cached is None or now - cached[0] >= MAX_STALE:
+            return None
+        return cached[1]
+
+    def _stations(self) -> tuple[list[BikeStation], tuple[City, ...]]:
         now = self._clock.now()
         out: list[BikeStation] = []
+        missing: list[City] = []
         with self._lock:
             for i, feed in enumerate(self._feeds):
-                cached = self._cache.get(i)
-                if cached is None or now - cached[0] >= self._ttl:
-                    try:
-                        cached = (now, feed.fetch_stations())
-                        self._cache[i] = cached
-                    except SourceError as exc:
-                        if cached is None or now - cached[0] >= MAX_STALE:
-                            raise
-                        log.warning(
-                            "bikes %s: refresh failed, serving the last copy: %s", feed.city, exc
-                        )
-                out.extend(cached[1])
-        return out
+                stations = self._feed_stations(i, feed, now)
+                if stations is None:
+                    missing.append(feed.city)
+                else:
+                    out.extend(stations)
+        if self._feeds and len(missing) == len(self._feeds):
+            raise SourceError(f"no YouBike feed is readable: {', '.join(missing)}")
+        return out, tuple(missing)
 
     def execute(self, center: GeoPoint) -> BikeSearchResult:
-        # Only stations in service can be used; a closed station is not the same as one with no bikes.
-        scored = [BikeHit(s, haversine_m(center, s.location)) for s in self._stations() if s.active]
+        stations, missing = self._stations()
+        # Only stations in service can be used; a closed station is not one with no bikes.
+        scored = [BikeHit(s, haversine_m(center, s.location)) for s in stations if s.active]
         scored.sort(key=lambda h: h.distance_m)
         for i, radius in enumerate(RADII_M):
             hits = tuple(h for h in scored if h.distance_m <= radius)[:MAX_STATIONS]
             if hits:
-                return BikeSearchResult(radius_m=radius, expanded=i > 0, hits=hits)
-        return BikeSearchResult(radius_m=RADII_M[-1], expanded=True, hits=())
+                return BikeSearchResult(radius_m=radius, expanded=i > 0, hits=hits, missing=missing)
+        return BikeSearchResult(radius_m=RADII_M[-1], expanded=True, hits=(), missing=missing)

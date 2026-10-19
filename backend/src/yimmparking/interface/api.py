@@ -332,6 +332,7 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             radius_m=found.radius_m,
             expanded=found.expanded,
             results=[to_bike_dto(h) for h in found.hits],
+            unavailable_cities=[city.value for city in found.missing],
         )
 
     def _search(

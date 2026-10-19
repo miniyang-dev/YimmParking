@@ -1,7 +1,7 @@
 import { bearingDeg, bikeState } from "../../domain/bikes";
 import { formatDistance } from "../../domain/distance";
 import { directionsUrl, type Coordinate } from "../../domain/maps";
-import type { BikeStation } from "../../domain/types";
+import type { BikeResponse, BikeStation } from "../../domain/types";
 import { useI18n } from "../../i18n";
 import { useBikes } from "../../state/queries";
 import { Symbol } from "../../ui/Symbol";
@@ -73,6 +73,18 @@ function BikeCell({ station, now }: { station: BikeStation; now: Date }) {
   }
 }
 
+/** Said whenever a city's feed could not be read: a short or empty list is then not the whole answer. */
+function MissingCities({ cities }: { cities: BikeResponse["unavailable_cities"] }) {
+  const { t } = useI18n();
+  if (cities.length === 0) return null;
+  const names = cities.map((city) => t(`bikes.city.${city}`)).join(t("bikes.city.join"));
+  return (
+    <p className="note" role="status">
+      {t("bikes.partial", { cities: names })}
+    </p>
+  );
+}
+
 function GoIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -117,13 +129,14 @@ export function BikeSection({ lot, now }: Props) {
     );
   }
 
-  const { results, radius_m: radius, expanded } = query.data;
+  const { results, radius_m: radius, expanded, unavailable_cities: missing } = query.data;
   if (results.length === 0) {
     return (
       <section className="bikes" aria-labelledby="bikes-title">
         <h2 id="bikes-title" className="band band--other">
           <span>{t("bikes.title", { r: radius, n: 0 })}</span>
         </h2>
+        <MissingCities cities={missing} />
         <p className="note" role="status">
           {t("bikes.noStation", { r: radius })}
           <small className="bikes__hint">{t("bikes.noStationHint", { r: radius })}</small>
@@ -137,6 +150,7 @@ export function BikeSection({ lot, now }: Props) {
       <h2 id="bikes-title" className="band band--other">
         <span>{t("bikes.title", { r: radius, n: results.length })}</span>
       </h2>
+      <MissingCities cities={missing} />
       {expanded && (
         <div className="bikes__widened">
           <RingDiagram lot={lot} stations={results} radius={radius} />

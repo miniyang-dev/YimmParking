@@ -20,11 +20,11 @@ from yimmparking.application.limits import (
     LimitedPlaces,
     UsageGate,
 )
+from yimmparking.application.ports import SourceError
 from yimmparking.application.refresh import RefreshAvailability, RefreshLots
 from yimmparking.application.search import ResolveAddress, SearchNearbyFood, SearchNearbyParking
 from yimmparking.application.search_bikes import SearchNearbyBikes
 from yimmparking.domain.geo import GeoPoint
-from yimmparking.application.ports import SourceError
 from yimmparking.domain.model import (
     AvailabilityBatch,
     AvailabilityReading,
@@ -368,10 +368,11 @@ def test_travel_times_reorder_results_by_walking_time() -> None:
 
 
 class _BikeFeed:
-    city = City.TAIPEI
-
-    def __init__(self, stations: list[BikeStation] | Exception) -> None:
+    def __init__(
+        self, stations: list[BikeStation] | Exception, city: City = City.TAIPEI
+    ) -> None:
         self._stations = stations
+        self.city = city
 
     def fetch_stations(self) -> list[BikeStation]:
         if isinstance(self._stations, Exception):
@@ -400,6 +401,7 @@ def test_bikes_nearby_lists_stations_by_distance() -> None:
         body = c.get("/api/v1/bikes/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}).json()
     container.close()
     assert (body["radius_m"], body["expanded"]) == (400, False)
+    assert body["unavailable_cities"] == []
     assert [r["name"] for r in body["results"]] == ["站near", "站far"]
     near = body["results"][0]
     assert near["rent"] == 0 and near["ret"] == 6  # zero is a real reading, not "no data"
@@ -421,6 +423,20 @@ def test_bikes_nearby_says_unavailable_when_the_feed_is_down() -> None:
     container.close()
     assert r.status_code == 502
     assert r.json()["error"]["code"] == "bikes_unavailable"
+
+
+def test_bikes_nearby_lists_the_readable_city_when_the_other_is_down() -> None:
+    feeds = [
+        _BikeFeed([_bike("a", CENTER.lat + 0.001)]),
+        _BikeFeed(SourceError("down"), city=City.NEW_TAIPEI),
+    ]
+    container = build("k", bike_feeds=feeds)
+    with TestClient(create_app(container=container)) as c:
+        r = c.get("/api/v1/bikes/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng})
+    container.close()
+    assert r.status_code == 200
+    assert [s["name"] for s in r.json()["results"]] == ["站a"]
+    assert r.json()["unavailable_cities"] == ["new_taipei"]
 
 
 def test_food_accepts_the_search_origin(client: TestClient) -> None:

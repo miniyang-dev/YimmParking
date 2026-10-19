@@ -142,6 +142,11 @@ export interface components {
             expanded: boolean;
             /** Results */
             results: components["schemas"]["BikeStationDTO"][];
+            /**
+             * Unavailable Cities
+             * @description Cities whose feed could not be read; their stations are missing from results
+             */
+            unavailable_cities: ("taipei" | "new_taipei")[];
         };
         /** BikeStationDTO */
         BikeStationDTO: {

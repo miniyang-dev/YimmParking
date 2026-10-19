@@ -134,6 +134,9 @@ class BikeSearchResponse(BaseModel):
     radius_m: int = Field(description="The radius that was searched (400, or 800 if widened)")
     expanded: bool = Field(description="True when nothing was within 400 m so 800 m was used")
     results: list[BikeStationDTO]
+    unavailable_cities: list[Literal["taipei", "new_taipei"]] = Field(
+        description="Cities whose feed could not be read; their stations are missing from results"
+    )
 
 
 class SourceStatusDTO(BaseModel):
