@@ -18,7 +18,7 @@ from yimmparking.application.ports import (
 )
 from yimmparking.domain.brand import BrandClassifier
 from yimmparking.domain.iparking import match_iparking
-from yimmparking.domain.model import Brand, City
+from yimmparking.domain.model import Brand, City, IParkingStation, ParkingLot
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ class CityReport:
 class LotsReport:
     dry_run: bool
     iparking_stations: int = 0
+    iparking_error: str | None = None  # directory unavailable; flags already held were kept
     cities: list[CityReport] = field(default_factory=list)
 
 
@@ -78,13 +79,14 @@ class RefreshLots:
     def run(self, *, dry_run: bool = True) -> LotsReport:
         report = LotsReport(dry_run=dry_run)
 
-        stations = []
+        stations: list[IParkingStation] | None = None
         try:
             stations = self._directory.fetch_stations()
         except SourceError as exc:
             # iParking is an enrichment: its absence must not block the government data.
-            log.warning("iParking directory unavailable, continuing without it: %s", exc)
-        report.iparking_stations = len(stations)
+            log.warning("iParking directory unavailable, keeping the flags already held: %s", exc)
+            report.iparking_error = str(exc)
+        report.iparking_stations = len(stations) if stations is not None else 0
 
         for feed in self._feeds:
             city_report = CityReport(city=feed.city)
@@ -96,7 +98,10 @@ class RefreshLots:
                 city_report.error = str(exc)
                 continue
 
-            matches = match_iparking(lots, stations)
+            if stations is not None:
+                matches = match_iparking(lots, stations)
+            else:
+                matches = self._held_iparking(feed.city, lots)
             lots = [
                 replace(lot, iparking_code=matches[lot.id]) if lot.id in matches else lot
                 for lot in lots
@@ -122,6 +127,20 @@ class RefreshLots:
                 self._repo.replace_lots(feed.city, lots)
                 city_report.written = True
         return report
+
+    def _held_iparking(self, city: City, lots: list[ParkingLot]) -> dict[str, str]:
+        """Without the directory, each lot keeps the flag it already had.
+
+        Replacing the lots would otherwise drop every iParking flag until the next successful
+        refresh, which silently moves those lots out of their vendor section. Only 嘟嘟房 lots
+        are eligible, exactly as when matching against the directory.
+        """
+        held = self._repo.iparking_codes(city)
+        return {
+            lot.id: held[lot.id]
+            for lot in lots
+            if lot.id in held and lot.brand is Brand.DODOHOME
+        }
 
 
 class RefreshAvailability:

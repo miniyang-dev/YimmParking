@@ -162,6 +162,15 @@ class SqliteStore:
             ).fetchall()
         return {r["id"] for r in rows}
 
+    def iparking_codes(self, city: City) -> dict[str, str]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, iparking_code FROM parking_lot "
+                "WHERE city = ? AND iparking_code IS NOT NULL",
+                (city.value,),
+            ).fetchall()
+        return {r["id"]: r["iparking_code"] for r in rows}
+
     def replace_lots(self, city: City, lots: list[ParkingLot]) -> None:
         with self._lock, self._conn:
             self._conn.execute("DELETE FROM parking_lot WHERE city = ?", (city.value,))

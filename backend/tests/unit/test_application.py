@@ -173,6 +173,33 @@ class TestRefreshLots:
         RefreshLots([feed], FakeDirectory(fail=True), store).run(dry_run=False)
         assert store.lot_count(City.TAIPEI) == 1
 
+    def test_iparking_outage_keeps_the_flags_already_held(self, store: SqliteStore) -> None:
+        feed = FakeFeed(
+            City.TAIPEI, [lot("1", "嘟嘟房甲站", CENTER), lot("2", "某停車場", CENTER)]
+        )
+        station = IParkingStation("DDHTPC001", "甲站", "", "TPC", CENTER)
+        RefreshLots([feed], FakeDirectory([station]), store).run(dry_run=False)
+
+        report = RefreshLots([feed], FakeDirectory(fail=True), store).run(dry_run=False)
+
+        found = {x.source_id: x for x in store.lots_in_box(_box_around(CENTER))}
+        assert found["1"].iparking_code == "DDHTPC001"
+        assert found["2"].iparking_code is None
+        assert report.iparking_error == "directory down"
+        assert report.cities[0].iparking_matched == 1
+
+    def test_a_held_flag_is_dropped_once_the_lot_is_no_longer_dodohome(
+        self, store: SqliteStore
+    ) -> None:
+        feed = FakeFeed(City.TAIPEI, [lot("1", "嘟嘟房甲站", CENTER)])
+        station = IParkingStation("DDHTPC001", "甲站", "", "TPC", CENTER)
+        RefreshLots([feed], FakeDirectory([station]), store).run(dry_run=False)
+
+        feed.lots = [lot("1", "改名停車場", CENTER)]
+        RefreshLots([feed], FakeDirectory(fail=True), store).run(dry_run=False)
+
+        assert store.lots_in_box(_box_around(CENTER))[0].iparking_code is None
+
 
 class TestRefreshAvailabilityAndSearch:
     t0 = datetime(2026, 10, 10, 14, 37, tzinfo=UTC)

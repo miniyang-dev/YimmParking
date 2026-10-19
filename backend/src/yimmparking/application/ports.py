@@ -144,6 +144,9 @@ class LotRepository(Protocol):
 
     def lot_ids(self, city: City) -> set[str]: ...
 
+    def iparking_codes(self, city: City) -> dict[str, str]:
+        """`{lot_id: iparking_code}` for every lot of `city` currently flagged as iParking."""
+
     def replace_lots(self, city: City, lots: list[ParkingLot]) -> None:
         """Atomically replace every lot of `city`."""
 
