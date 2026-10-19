@@ -12,6 +12,7 @@ import {
   type FoodSort,
 } from "../../domain/food";
 import { directionsUrl, type Coordinate } from "../../domain/maps";
+import { dialable } from "../../domain/phone";
 import { walkMinutes } from "../../domain/walk";
 import type { Lot } from "../../domain/types";
 import { BRAND_LABEL } from "../../domain/vendors";
@@ -387,6 +388,7 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
           ? t("detail.stale")
           : null;
 
+  const dial = lot.phone ? dialable(lot.phone) : null;
   const facts: [string, string][] = [[t("detail.hours"), lot.service_time || "—"]];
   if (lot.total_car !== null && lot.total_car > 0) facts.push([t("detail.capacity"), String(lot.total_car)]);
   if (lot.ev_charging_spaces) facts.push([t("detail.ev"), String(lot.ev_charging_spaces)]);
@@ -494,9 +496,13 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
           <div className="facts__row">
             <dt>{t("detail.phone")}</dt>
             <dd>
-              <a className="link link--plain" href={`tel:${lot.phone.replace(/[^\d+]/g, "")}`}>
-                {lot.phone}
-              </a>
+              {dial ? (
+                <a className="link link--plain" href={`tel:${dial}`}>
+                  {lot.phone}
+                </a>
+              ) : (
+                lot.phone
+              )}
             </dd>
           </div>
         )}
