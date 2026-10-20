@@ -9,9 +9,9 @@ and `0` turns the cache off.
 from __future__ import annotations
 
 import logging
-import threading
 from datetime import timedelta
 
+from yimmparking.application.keyed_locks import KeyedLocks
 from yimmparking.application.ports import Clock, PlaceCache, PlaceSource
 from yimmparking.domain.geo import GeoPoint
 from yimmparking.domain.model import Place
@@ -38,8 +38,7 @@ class CachedPlaces:
         self._store = store
         self._clock = clock
         self._ttl = ttl
-        self._guard = threading.Lock()
-        self._in_flight: dict[str, threading.Lock] = {}
+        self._locks = KeyedLocks()
 
     def nearby_food(
         self,
@@ -56,9 +55,7 @@ class CachedPlaces:
             return cached
 
         # Concurrent identical requests wait for the first instead of each being billed.
-        with self._guard:
-            lock = self._in_flight.setdefault(key, threading.Lock())
-        with lock:
+        with self._locks.hold(key):
             cached = self._store.get_places(key, self._clock.now())
             if cached is not None:
                 return cached

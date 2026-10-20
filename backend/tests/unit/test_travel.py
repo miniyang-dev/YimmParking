@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
@@ -59,6 +60,31 @@ class FakeRouter:
             d: (RouteTime(self.times[d] // divisor, 100) if self.times.get(d) else None)
             for d in ids
         }
+
+
+class BlockingRouter(FakeRouter):
+    """Holds every call inside the router until `release` is set."""
+
+    def __init__(self, times: dict[str, int | None]) -> None:
+        super().__init__(times)
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self._calls = 0
+        self._counted = threading.Condition()
+
+    def travel_times(
+        self, origin: GeoPoint, destinations: list[tuple[str, GeoPoint]], mode: TravelMode
+    ) -> dict[str, RouteTime | None]:
+        with self._counted:
+            self._calls += 1
+            self._counted.notify_all()
+        self.entered.set()
+        self.release.wait(5)
+        return super().travel_times(origin, destinations, mode)
+
+    def wait_for_calls(self, n: int) -> bool:
+        with self._counted:
+            return self._counted.wait_for(lambda: self._calls >= n, timeout=5)
 
 
 @pytest.fixture
@@ -277,6 +303,49 @@ class TestRouteCache:
             router.travel_times(ORIGIN, [("a", ORIGIN)], WALK)
         inner.fail = None
         assert router.travel_times(ORIGIN, [("a", ORIGIN)], WALK)["a"] == RouteTime(100, 100)
+
+    def test_a_search_elsewhere_does_not_wait_for_a_slow_router_call(
+        self, store: SqliteStore, clock: Clock
+    ) -> None:
+        inner = BlockingRouter({"a": 100})
+        router, _ = self.build(store, clock, inner)
+        first = threading.Thread(
+            target=router.travel_times, args=(ORIGIN, [("a", ORIGIN)], WALK)
+        )
+        first.start()
+        assert inner.entered.wait(5)  # the first call is now inside the router, blocked
+
+        elsewhere = threading.Thread(
+            target=router.travel_times, args=(GeoPoint(25.0600, 121.5600), [("a", ORIGIN)], WALK)
+        )
+        elsewhere.start()
+        # The second origin reaches the router while the first call is still in flight.
+        assert inner.wait_for_calls(2)
+        inner.release.set()
+        first.join(5)
+        elsewhere.join(5)
+
+    def test_identical_searches_at_once_are_billed_once(
+        self, store: SqliteStore, clock: Clock
+    ) -> None:
+        inner = BlockingRouter({"a": 100})
+        router, gate = self.build(store, clock, inner)
+        results: list[dict[str, RouteTime | None]] = []
+
+        def search() -> None:
+            results.append(router.travel_times(ORIGIN, [("a", ORIGIN)], WALK))
+
+        threads = [threading.Thread(target=search) for _ in range(4)]
+        for t in threads:
+            t.start()
+        assert inner.entered.wait(5)
+        inner.release.set()
+        for t in threads:
+            t.join(5)
+
+        assert len(inner.asked) == 1
+        assert gate.used(ROUTES_ELEMENTS) == 1
+        assert results == [{"a": RouteTime(100, 100)}] * 4
 
     def test_purge_removes_expired_entries(self, store: SqliteStore, clock: Clock) -> None:
         inner = FakeRouter({"a": 100})

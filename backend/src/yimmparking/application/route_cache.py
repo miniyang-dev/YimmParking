@@ -9,9 +9,9 @@ setting and `0` turns the cache off.
 from __future__ import annotations
 
 import logging
-import threading
 from datetime import timedelta
 
+from yimmparking.application.keyed_locks import KeyedLocks
 from yimmparking.application.ports import Clock, RouteCache, TravelRouter
 from yimmparking.domain.geo import GeoPoint
 from yimmparking.domain.model import RouteTime, TravelMode
@@ -19,10 +19,14 @@ from yimmparking.domain.model import RouteTime, TravelMode
 log = logging.getLogger(__name__)
 
 
-def route_key(origin: GeoPoint, destination_id: str, mode: TravelMode) -> str:
+def _origin_part(origin: GeoPoint, mode: TravelMode) -> str:
     # 4 decimal places is about 11 m: a search for the same place hits the same entries. The mode is
     # part of the key: the same pair has a different time on foot and by bicycle.
-    return f"route|{mode.value}|{origin.lat:.4f},{origin.lng:.4f}|{destination_id}"
+    return f"{mode.value}|{origin.lat:.4f},{origin.lng:.4f}"
+
+
+def route_key(origin: GeoPoint, destination_id: str, mode: TravelMode) -> str:
+    return f"route|{_origin_part(origin, mode)}|{destination_id}"
 
 
 class CachedRouter:
@@ -33,14 +37,15 @@ class CachedRouter:
         self._store = store
         self._clock = clock
         self._ttl = ttl
-        # Serialises misses so two identical searches at once are not both billed.
-        self._lock = threading.Lock()
+        # One lock per origin and mode: two identical searches at once are not both billed, while a
+        # search from somewhere else does not wait for this one's router call.
+        self._locks = KeyedLocks()
 
     def travel_times(
         self, origin: GeoPoint, destinations: list[tuple[str, GeoPoint]], mode: TravelMode
     ) -> dict[str, RouteTime | None]:
         keys = {dest_id: route_key(origin, dest_id, mode) for dest_id, _ in destinations}
-        with self._lock:
+        with self._locks.hold(_origin_part(origin, mode)):
             hits = self._store.get_routes(list(keys.values()), self._clock.now())
             missing = [(i, p) for i, p in destinations if keys[i] not in hits]
             fetched: dict[str, RouteTime | None] = {}
