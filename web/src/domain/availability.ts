@@ -7,12 +7,13 @@ import type { Availability } from "./types";
 export type SpaceState =
   | { kind: "known"; count: number; suspect: boolean }
   | { kind: "stale"; count: number; suspect: boolean }
-  | { kind: "full" }
+  | { kind: "full"; stale: boolean }
   | { kind: "none" };
 
 export function spaceState(a: Availability): SpaceState {
   if (a.state !== "known" || a.count === null) return { kind: "none" };
-  if (a.count === 0) return { kind: "full" };
+  // An old zero is still said to be old: a lot that was full half an hour ago may not be now.
+  if (a.count === 0) return { kind: "full", stale: a.freshness === "stale" };
   if (a.freshness === "stale") return { kind: "stale", count: a.count, suspect: a.suspect };
   return { kind: "known", count: a.count, suspect: a.suspect };
 }

@@ -17,13 +17,15 @@ export function SpaceCell({ availability, now }: Props) {
   const age = ageMinutes(availability.observed_at, now);
 
   switch (state.kind) {
-    case "full":
+    case "full": {
+      const sub = state.stale && age !== null ? t("spaces.ago", { min: age }) : t("spaces.fullHint");
       return (
-        <div className="cell cell--full" role="group" aria-label={`${t("spaces.full")}, ${t("spaces.fullHint")}`}>
+        <div className="cell cell--full" role="group" aria-label={`${t("spaces.full")}, ${sub}`}>
           <b className="cell__num">{t("spaces.full")}</b>
-          <span className="cell__sub">{t("spaces.fullHint")}</span>
+          <span className="cell__sub">{sub}</span>
         </div>
       );
+    }
     case "none":
       return (
         <div className="cell cell--none" role="group" aria-label={t("spaces.none")}>

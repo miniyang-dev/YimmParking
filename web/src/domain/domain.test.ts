@@ -18,7 +18,10 @@ const av = (over: Partial<Availability>): Availability => ({
 
 describe("spaceState", () => {
   it("treats a real zero as full, not as no data", () => {
-    expect(spaceState(av({ count: 0 }))).toEqual({ kind: "full" });
+    expect(spaceState(av({ count: 0 }))).toEqual({ kind: "full", stale: false });
+  });
+  it("says when a zero is an old reading", () => {
+    expect(spaceState(av({ count: 0, freshness: "stale" }))).toEqual({ kind: "full", stale: true });
   });
   it("treats unknown as none even when freshness is fresh", () => {
     expect(spaceState(av({ state: "unknown", count: null }))).toEqual({ kind: "none" });
