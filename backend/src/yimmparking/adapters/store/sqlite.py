@@ -7,6 +7,7 @@ them against an existing database is always safe.
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import threading
 from collections.abc import Iterable
@@ -28,7 +29,10 @@ from yimmparking.domain.model import (
 )
 from yimmparking.domain.opening import OpeningPeriod
 
+log = logging.getLogger(__name__)
+
 OBSERVATION_RETENTION = timedelta(days=14)
+BUSY_TIMEOUT_S = 15.0
 _IN_CHUNK = 500
 
 # Migrations are applied by position and recorded in PRAGMA user_version, so this tuple is
@@ -125,12 +129,30 @@ class SqliteStore:
         if self._path != ":memory:":
             Path(self._path).parent.mkdir(parents=True, exist_ok=True)
         # One shared connection guarded by a lock: the dataset is small and writes are rare.
-        self._conn = sqlite3.connect(self._path, check_same_thread=False)
+        # The API and the worker are separate processes on the same file, so a write may find the
+        # other one mid-write: wait for it (`timeout`) instead of failing with "database is locked".
+        self._conn = sqlite3.connect(self._path, check_same_thread=False, timeout=BUSY_TIMEOUT_S)
         self._conn.row_factory = sqlite3.Row
         self._lock = threading.RLock()
+        self._use_wal()
         self._migrate()
 
     # ---- schema ---------------------------------------------------------------------------
+
+    def _use_wal(self) -> None:
+        """Write-ahead logging, so the API keeps reading while the worker writes.
+
+        The mode is stored in the file, so it only has to succeed once. If another process holds
+        the file right now, the database still works in its current mode and the next start
+        tries again.
+        """
+        if self._path == ":memory:":
+            return
+        with self._lock:
+            try:
+                self._conn.execute("PRAGMA journal_mode=WAL")
+            except sqlite3.OperationalError as exc:
+                log.warning("%s: could not switch to WAL, keeping its mode: %s", self._path, exc)
 
     def _migrate(self) -> None:
         with self._lock:
