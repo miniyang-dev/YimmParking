@@ -72,9 +72,7 @@ def cmd_worker(_: argparse.Namespace) -> int:
             now = time.monotonic()
             if now >= next_lots:
                 _run_safely("lots", lambda: container.refresh_lots.run(dry_run=False))
-                container.store.purge_expired(container.clock.now())
-                container.store.purge_expired_places(container.clock.now())
-                container.store.purge_expired_routes(container.clock.now())
+                _purge_caches(container)
                 next_lots = now + settings.lots_interval_s
             if now >= next_availability:
                 _run_safely(
@@ -86,6 +84,22 @@ def cmd_worker(_: argparse.Namespace) -> int:
         return 0
     finally:
         container.close()
+
+
+def _purge_caches(container: Container) -> None:
+    """Expired cache rows only cost disk space, so a failed purge (say, the database is busy) is
+    logged and tried again next time instead of stopping the scheduler."""
+    now = container.clock.now()
+    store = container.store
+    for name, purge in (
+        ("geocode", store.purge_expired),
+        ("food", store.purge_expired_places),
+        ("route", store.purge_expired_routes),
+    ):
+        try:
+            purge(now)
+        except Exception:
+            log.exception("purging the expired %s cache failed", name)
 
 
 def _run_safely(name: str, job: Any) -> None:
