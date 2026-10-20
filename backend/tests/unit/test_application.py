@@ -464,6 +464,18 @@ class TestGooglePlaces:
                 ((9960, 10200),),  # Saturday 22:00 into Sunday 02:00 wraps the week
             ),
             ([], None),  # Google said nothing: unknown, not closed
+            # Unreadable schedules are unknown too, never a partial week or a crash.
+            ([{"open": {"hour": 9}, "close": {"day": 1, "hour": 18}}], None),
+            ([{"open": {"day": 9, "hour": 9}, "close": {"day": 9, "hour": 18}}], None),
+            ([{"open": {"day": 1, "hour": "x"}, "close": {"day": 1, "hour": 18}}], None),
+            (
+                [
+                    {"open": {"day": 1, "hour": 9}, "close": {"day": 1, "hour": 18}},
+                    {"close": {"day": 2, "hour": 18}},
+                ],
+                None,
+            ),
+            (["junk"], None),
         ],
     )
     def test_opening_periods_are_parsed(self, periods: list, expected: object) -> None:
@@ -475,6 +487,22 @@ class TestGooglePlaces:
             assert parsed is None
         else:
             assert parsed == tuple(OpeningPeriod(start=s, end=e) for s, e in expected)
+
+    def test_a_place_with_unreadable_hours_is_still_listed(self, make_client: ClientFactory) -> None:
+        payload = {
+            "places": [
+                {
+                    "id": "p1",
+                    "displayName": {"text": "牛肉麵"},
+                    "location": {"latitude": 25.0378, "longitude": 121.5637},
+                    "regularOpeningHours": {"periods": [{"open": {"hour": 11}}]},
+                }
+            ]
+        }
+        places = GooglePlaces(make_client(lambda r: httpx.Response(200, json=payload)), "k")
+        [place] = places.nearby_food(CENTER, 500, 20)
+        assert place.name == "牛肉麵"
+        assert place.opening is None
 
     def test_http_error_is_a_places_error(self, make_client: ClientFactory) -> None:
         places = GooglePlaces(make_client(lambda r: httpx.Response(403)), api_key="k")

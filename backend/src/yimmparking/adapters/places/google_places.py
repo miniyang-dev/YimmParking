@@ -71,22 +71,38 @@ def _parse_walking(summary: Any) -> RouteTime | None:
         return None
 
 
+def _point_in_week(point: dict[str, Any]) -> int:
+    """`{"day": 1, "hour": 11, "minute": 0}` → minutes from Sunday 00:00. Raises on bad input."""
+    day = int(point["day"])
+    if not 0 <= day <= 6:
+        raise ValueError(f"day out of range: {day}")
+    return minutes_of(day, int(point.get("hour", 0)), int(point.get("minute", 0)))
+
+
 def _parse_opening(raw: dict[str, Any]) -> tuple[OpeningPeriod, ...] | None:
-    """Weekly schedule from `regularOpeningHours`; None when Google did not say."""
+    """Weekly schedule from `regularOpeningHours`; None when Google did not say.
+
+    A schedule that cannot be read is also None ("unknown"), never a partial one: dropping a
+    malformed period would make the place look closed when it is open. It must not fail the whole
+    request either, which has already been billed.
+    """
     periods = (raw.get("regularOpeningHours") or {}).get("periods")
     if not periods:
         return None
     parsed: list[OpeningPeriod] = []
-    for period in periods:
-        opened = period.get("open") or {}
-        closed = period.get("close")
-        start = minutes_of(opened["day"], opened.get("hour", 0), opened.get("minute", 0))
-        if closed is None:  # open with no close: open all week
-            return (OpeningPeriod(start=0, end=MINUTES_PER_WEEK),)
-        end = minutes_of(closed["day"], closed.get("hour", 0), closed.get("minute", 0))
-        if end <= start:  # closes after midnight, into the next day (or the next week)
-            end += MINUTES_PER_WEEK
-        parsed.append(OpeningPeriod(start=start, end=end))
+    try:
+        for period in periods:
+            start = _point_in_week(period["open"])
+            closed = period.get("close")
+            if closed is None:  # open with no close: open all week
+                return (OpeningPeriod(start=0, end=MINUTES_PER_WEEK),)
+            end = _point_in_week(closed)
+            if end <= start:  # closes after midnight, into the next day (or the next week)
+                end += MINUTES_PER_WEEK
+            parsed.append(OpeningPeriod(start=start, end=end))
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        log.warning("place %s: unreadable opening hours, so unknown: %s", raw.get("id"), exc)
+        return None
     return tuple(parsed)
 
 
