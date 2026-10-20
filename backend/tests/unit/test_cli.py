@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
 
-from yimmparking.interface.cli import _purge_caches
+from yimmparking.interface.cli import _purge_expired
 from yimmparking.interface.container import Container
 
 NOW = datetime(2026, 10, 20, tzinfo=UTC)
@@ -31,9 +31,20 @@ class FlakyStore:
         self.purged.append("route")
         return 0
 
+    def purge_history(self, now: datetime, keep: timedelta) -> int:
+        self.purged.append(f"history {keep.days}d")
+        return 0
+
 
 def _container(store: Any) -> Container:
-    return cast(Container, SimpleNamespace(store=store, clock=SimpleNamespace(now=lambda: NOW)))
+    return cast(
+        Container,
+        SimpleNamespace(
+            store=store,
+            clock=SimpleNamespace(now=lambda: NOW),
+            settings=SimpleNamespace(history_days=365),
+        ),
+    )
 
 
 def test_a_failed_purge_is_logged_and_does_not_stop_the_worker(
@@ -41,7 +52,7 @@ def test_a_failed_purge_is_logged_and_does_not_stop_the_worker(
 ) -> None:
     store = FlakyStore()
     with caplog.at_level(logging.ERROR):
-        _purge_caches(_container(store))  # must not raise
+        _purge_expired(_container(store))  # must not raise
 
-    assert store.purged == ["food", "route"]  # the others still ran
-    assert "purging the expired geocode cache failed" in caplog.text
+    assert store.purged == ["food", "route", "history 365d"]  # the others still ran
+    assert "purging the expired geocode rows failed" in caplog.text

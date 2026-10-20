@@ -12,7 +12,7 @@ from yimmparking.adapters.store.sqlite import SqliteStore
 
 # The table each migration created, in the order it shipped. Appending is fine; changing or
 # reordering an existing entry breaks every database already at that version.
-HISTORY = ["parking_lot", "api_usage", "place_cache", "walk_cache"]
+HISTORY = ["parking_lot", "api_usage", "place_cache", "walk_cache", "lot_key"]
 
 
 def tables(path: Path) -> set[str]:

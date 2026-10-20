@@ -8,11 +8,17 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import sqlite3
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import asdict
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
+from yimmparking.adapters.store import history
+from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.interface.container import Container, build_container
 from yimmparking.interface.settings import Settings
 
@@ -72,7 +78,7 @@ def cmd_worker(_: argparse.Namespace) -> int:
             now = time.monotonic()
             if now >= next_lots:
                 _run_safely("lots", lambda: container.refresh_lots.run(dry_run=False))
-                _purge_caches(container)
+                _purge_expired(container)
                 next_lots = now + settings.lots_interval_s
             if now >= next_availability:
                 _run_safely(
@@ -86,20 +92,68 @@ def cmd_worker(_: argparse.Namespace) -> int:
         container.close()
 
 
-def _purge_caches(container: Container) -> None:
-    """Expired cache rows only cost disk space, so a failed purge (say, the database is busy) is
-    logged and tried again next time instead of stopping the scheduler."""
+def _purge_expired(container: Container) -> None:
+    """Expired rows only cost disk space, so a failed purge (say, the database is busy) is logged
+    and tried again next time instead of stopping the scheduler."""
     now = container.clock.now()
     store = container.store
-    for name, purge in (
+    keep = timedelta(days=container.settings.history_days)
+    purges: tuple[tuple[str, Callable[[datetime], int]], ...] = (
         ("geocode", store.purge_expired),
         ("food", store.purge_expired_places),
         ("route", store.purge_expired_routes),
-    ):
+        ("history", lambda at: store.purge_history(at, keep)),
+    )
+    for name, purge in purges:
         try:
             purge(now)
         except Exception:
-            log.exception("purging the expired %s cache failed", name)
+            log.exception("purging the expired %s rows failed", name)
+
+
+def cmd_convert_history(args: argparse.Namespace) -> int:
+    """One-off: turn the old per-poll availability table into the change-only history.
+
+    Dry-run by default: the database is opened read-only and only the plan is printed. With
+    `--yes` the history is converted, every old reading is checked against it, the old table is
+    dropped (all or nothing), and the file is compacted. Stop the API and the worker first.
+    """
+    settings = Settings.from_env()
+    path = settings.db_path
+    print(f"target database: {path}", file=sys.stderr)
+    if not path.is_file():
+        print("no such file", file=sys.stderr)
+        return 1
+    print(f"size before: {_size_mb(path)}", file=sys.stderr)
+
+    if not args.yes:
+        print("mode: DRY-RUN (opened read-only, nothing will be written)", file=sys.stderr)
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        try:
+            _print(history.convert(conn, write=False))
+        finally:
+            conn.close()
+        return 0
+
+    print("mode: WRITE (convert, verify, drop the old table, compact)", file=sys.stderr)
+    store = SqliteStore(path)
+    try:
+        report = store.convert_history()
+        _print(report)
+        if report.written:
+            store.vacuum()
+    except history.ConversionMismatch as exc:
+        print(f"verification failed, nothing was changed: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        store.close()
+    print(f"size after: {_size_mb(path)}", file=sys.stderr)
+    return 0
+
+
+def _size_mb(path: Path) -> str:
+    files = [path, path.with_name(path.name + "-wal")]
+    return f"{sum(f.stat().st_size for f in files if f.exists()) / 1e6:.1f} MB (with -wal)"
 
 
 def _run_safely(name: str, job: Any) -> None:
@@ -150,6 +204,11 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("purge-geocache", help="delete expired geocode cache rows").set_defaults(
         func=cmd_purge_geocache
     )
+    convert = sub.add_parser(
+        "convert-history", help="one-off: move the old availability table to change-only history"
+    )
+    convert.add_argument("--yes", action="store_true", help="actually write (default is dry-run)")
+    convert.set_defaults(func=cmd_convert_history)
     sub.add_parser("worker", help="run the ingestion loop").set_defaults(func=cmd_worker)
     serve = sub.add_parser("serve", help="run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")

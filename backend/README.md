@@ -29,6 +29,9 @@ yimmparking refresh-availability [--yes]
 
 yimmparking worker              # loop: availability every 2 min, lots daily
 yimmparking serve --port 8000   # HTTP API, OpenAPI at /docs
+
+# one-off, services stopped: old per-poll history → change-only history (dry-run by default)
+yimmparking convert-history [--yes]
 ```
 
 ## Test
@@ -99,6 +102,24 @@ Food comes from Google Places **Text Search** (not Nearby Search) because only i
 20 result slots. A review-count floor (default 100) cannot be sent to Google, so it is applied after
 the response. Billing is per request, not per result, so this improves the quality of the slots,
 not the cost. Results are restricted to a rectangle and trimmed to the radius afterwards.
+
+## Availability history
+
+Kept for a later "will there be a space when I get there" estimate; nothing reads it yet.
+
+- `availability_change`: a lot's count is stored only when it differs from its previous reading,
+  so the value at any moment is the last change at or before it. Lots are integer keys
+  (`lot_key`), times are whole UTC seconds.
+- `availability_poll`: every feed read with a new timestamp, per city. A feed that stops (or keeps
+  repeating one timestamp) leaves a gap here, so a frozen number is not mistaken for a steady one.
+- Kept 365 days (`YIMM_HISTORY_DAYS`), about 1.4 MB a day. The worker drops older rows daily, keeping
+  each lot's last change before the window so the window's first hours still have a value.
+
+Releases before this stored every reading of every poll in `availability_observation` (about
+130 MB a day with its indexes). `yimmparking convert-history --yes` moves it into the tables
+above, checks every old reading against the rebuilt history, then drops the old table and compacts
+the file; on any mismatch nothing is changed. Without `--yes` it opens the database read-only and
+only reports. Stop the API and the worker first, and back the file up.
 
 ## Data caveats
 

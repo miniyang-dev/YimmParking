@@ -47,6 +47,7 @@ class Settings:
     routes_monthly_limit: int
     routes_endpoint: str | None
     route_cache_ttl_days: float
+    history_days: int
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -76,4 +77,7 @@ class Settings:
             routes_monthly_limit=int(env.get("YIMM_ROUTES_MONTHLY_LIMIT", "9000")),
             routes_endpoint=env.get("YIMM_ROUTES_ENDPOINT") or None,
             route_cache_ttl_days=float(env.get("YIMM_ROUTE_CACHE_TTL_DAYS", "30")),
+            # Availability history (changes only) kept for a year: enough to see weekly and
+            # seasonal patterns, at roughly 1.4 MB a day.
+            history_days=int(env.get("YIMM_HISTORY_DAYS", "365")),
         )

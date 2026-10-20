@@ -1,4 +1,4 @@
-"""SQLite storage: lots, latest availability, an availability history, and the geocode cache.
+"""SQLite storage: lots, latest availability, the availability history, quotas and caches.
 
 The schema is created by idempotent, versioned migrations (`PRAGMA user_version`), so running
 them against an existing database is always safe.
@@ -15,6 +15,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from yimmparking.adapters.store import history
 from yimmparking.application.search import GEOCODE_CACHE_TTL
 from yimmparking.domain.geo import BoundingBox, GeoPoint
 from yimmparking.domain.model import (
@@ -31,7 +32,6 @@ from yimmparking.domain.opening import OpeningPeriod
 
 log = logging.getLogger(__name__)
 
-OBSERVATION_RETENTION = timedelta(days=14)
 BUSY_TIMEOUT_S = 15.0
 _IN_CHUNK = 500
 
@@ -110,6 +110,9 @@ _MIGRATIONS: tuple[str, ...] = (
         expires_at TEXT NOT NULL
     );
     """,
+    # v5: availability history as changes only, plus the polls that say when a feed was read.
+    # The v1 table it replaces is converted and dropped by `yimmparking convert-history`.
+    history.SCHEMA,
 )
 
 
@@ -122,7 +125,7 @@ def _parse(value: str) -> datetime:
 
 
 class SqliteStore:
-    """Implements LotRepository and GeocodeCache on one SQLite file."""
+    """Implements LotRepository, QuotaStore and the caches on one SQLite file."""
 
     def __init__(self, path: str | Path) -> None:
         self._path = str(path)
@@ -240,13 +243,8 @@ class SqliteStore:
     def record_availability(self, batch: AvailabilityBatch) -> None:
         observed = _iso(batch.observed_at)
         with self._lock, self._conn:
-            self._conn.executemany(
-                """
-                INSERT OR IGNORE INTO availability_observation (lot_id, city, count, observed_at)
-                VALUES (?,?,?,?)
-                """,
-                [(r.lot_id, batch.city.value, r.count, observed) for r in batch.readings],
-            )
+            previous = self.latest_availability([r.lot_id for r in batch.readings])
+            history.record(self._conn, batch, previous)
             # Only move "latest" forward: re-running with an older feed must not rewind it.
             self._conn.executemany(
                 """
@@ -259,10 +257,20 @@ class SqliteStore:
                 """,
                 [(r.lot_id, batch.city.value, r.count, observed) for r in batch.readings],
             )
-            self._conn.execute(
-                "DELETE FROM availability_observation WHERE observed_at < ?",
-                (_iso(batch.observed_at - OBSERVATION_RETENTION),),
-            )
+
+    def purge_history(self, now: datetime, keep: timedelta) -> int:
+        with self._lock, self._conn:
+            return history.purge(self._conn, now - keep)
+
+    def convert_history(self) -> history.Conversion:
+        """Convert the old per-poll table into the change-only history (see `history.convert`)."""
+        with self._lock:
+            return history.convert(self._conn, write=True)
+
+    def vacuum(self) -> None:
+        """Rewrite the file without its free pages, so space freed by a large delete is returned."""
+        with self._lock:
+            self._conn.execute("VACUUM")
 
     def latest_availability(self, lot_ids: list[str]) -> dict[str, tuple[int | None, datetime]]:
         out: dict[str, tuple[int | None, datetime]] = {}
