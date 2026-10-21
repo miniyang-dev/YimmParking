@@ -267,6 +267,26 @@ class SqliteStore:
         with self._lock:
             return history.convert(self._conn, write=True)
 
+    def backup_to(self, target: Path) -> None:
+        """A consistent copy of the whole database at `target`, checked before it is put there.
+
+        Written beside the target first and renamed into place, so a failed or interrupted copy
+        never replaces a good one.
+        """
+        partial = target.with_name(target.name + ".partial")
+        partial.unlink(missing_ok=True)
+        copy = sqlite3.connect(partial)
+        try:
+            with self._lock:
+                self._conn.backup(copy)
+            check = copy.execute("PRAGMA quick_check").fetchone()[0]
+        finally:
+            copy.close()
+        if check != "ok":
+            partial.unlink(missing_ok=True)
+            raise sqlite3.DatabaseError(f"backup failed its check: {check}")
+        partial.replace(target)
+
     def vacuum(self) -> None:
         """Rewrite the file without its free pages, so space freed by a large delete is returned."""
         with self._lock:

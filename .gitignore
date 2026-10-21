@@ -28,3 +28,6 @@ Thumbs.db
 .impeccable/questions/
 .impeccable/build/
 .impeccable/review/
+
+# Local database backups (YIMM_BACKUP_DIR default)
+backend/backup/

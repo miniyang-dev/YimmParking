@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import pytest
 
-from yimmparking.interface.cli import _purge_expired
+from yimmparking.interface.cli import _backup_daily, _purge_expired
 from yimmparking.interface.container import Container
 
 NOW = datetime(2026, 10, 20, tzinfo=UTC)
@@ -56,3 +56,23 @@ def test_a_failed_purge_is_logged_and_does_not_stop_the_worker(
 
     assert store.purged == ["food", "route", "history 365d"]  # the others still ran
     assert "purging the expired geocode rows failed" in caplog.text
+
+
+def test_a_failed_backup_is_logged_and_does_not_stop_the_worker(
+    tmp_path: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    class FullDisk:
+        def backup_to(self, target: Any) -> None:
+            raise OSError("No space left on device")
+
+    container = cast(
+        Container,
+        SimpleNamespace(
+            store=FullDisk(),
+            clock=SimpleNamespace(now=lambda: NOW),
+            settings=SimpleNamespace(backup_dir=tmp_path / "backup", backup_keep=7),
+        ),
+    )
+    with caplog.at_level(logging.ERROR):
+        _backup_daily(container)  # must not raise
+    assert "daily backup to" in caplog.text and "No space left" in caplog.text

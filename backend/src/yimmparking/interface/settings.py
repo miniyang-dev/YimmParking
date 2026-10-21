@@ -49,14 +49,17 @@ class Settings:
     route_cache_ttl_days: float
     history_days: int
     alert_url: str | None
+    backup_dir: Path
+    backup_keep: int
 
     @classmethod
     def from_env(cls) -> Settings:
         _load_dotenv(BACKEND_DIR / ".env")
         env = os.environ
+        db_path = Path(env.get("YIMM_DB_PATH", str(DEFAULT_DB_PATH)))
         origins = env.get("YIMM_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
         return cls(
-            db_path=Path(env.get("YIMM_DB_PATH", str(DEFAULT_DB_PATH))),
+            db_path=db_path,
             google_maps_api_key=env.get("GOOGLE_MAPS_API_KEY") or None,
             cors_origins=tuple(o.strip() for o in origins.split(",") if o.strip()),
             user_agent=env.get("YIMM_USER_AGENT", "YimmParking/0.1"),
@@ -83,4 +86,7 @@ class Settings:
             history_days=int(env.get("YIMM_HISTORY_DAYS", "365")),
             # Where a stopped feed is reported (plain-text POST, e.g. https://ntfy.sh/<topic>).
             alert_url=env.get("YIMM_ALERT_URL") or None,
+            # Daily copies sit next to the data folder (…/data/x.db → …/backup/), newest 7 kept.
+            backup_dir=Path(env.get("YIMM_BACKUP_DIR") or db_path.parent.parent / "backup"),
+            backup_keep=int(env.get("YIMM_BACKUP_KEEP", "7")),
         )

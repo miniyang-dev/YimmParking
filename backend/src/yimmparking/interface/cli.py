@@ -13,16 +13,17 @@ import sys
 import time
 from collections.abc import Callable
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from yimmparking.adapters.store import history
+from yimmparking.adapters.store import backup, history
 from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.interface.container import Container, build_container
 from yimmparking.interface.settings import Settings
 
 log = logging.getLogger("yimmparking")
+TAIPEI = timezone(timedelta(hours=8))  # a daily copy is named by the local date
 
 
 def _print(report: Any) -> None:
@@ -79,6 +80,7 @@ def cmd_worker(_: argparse.Namespace) -> int:
             if now >= next_lots:
                 _run_safely("lots", lambda: container.refresh_lots.run(dry_run=False))
                 _purge_expired(container)
+                _backup_daily(container)
                 next_lots = now + settings.lots_interval_s
             if now >= next_availability:
                 _run_safely(
@@ -88,6 +90,46 @@ def cmd_worker(_: argparse.Namespace) -> int:
                 next_availability = now + settings.availability_interval_s
             time.sleep(5)
     except KeyboardInterrupt:
+        return 0
+    finally:
+        container.close()
+
+
+def _backup_daily(container: Container) -> None:
+    """Today's copy of the database; a failure is logged and tried again tomorrow."""
+    settings = container.settings
+    try:
+        today = container.clock.now().astimezone(TAIPEI).date()
+        result = backup.backup_daily(
+            container.store, settings.backup_dir, today, settings.backup_keep
+        )
+    except Exception:
+        log.exception("daily backup to %s failed", settings.backup_dir)
+        return
+    log.info(
+        "backup written: %s (%.1f MB), removed %d old copies",
+        result.path,
+        result.size / 1e6,
+        len(result.removed),
+    )
+
+
+def cmd_backup_db(_: argparse.Namespace) -> int:
+    """Make today's copy now (the worker does this once a day)."""
+    settings = Settings.from_env()
+    container = build_container(settings)
+    try:
+        print(
+            f"database: {settings.db_path}\n"
+            f"backup folder: {settings.backup_dir} "
+            f"(newest {settings.backup_keep} daily copies kept)",
+            file=sys.stderr,
+        )
+        today = container.clock.now().astimezone(TAIPEI).date()
+        result = backup.backup_daily(
+            container.store, settings.backup_dir, today, settings.backup_keep
+        )
+        _print(result)
         return 0
     finally:
         container.close()
@@ -218,6 +260,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     convert.add_argument("--yes", action="store_true", help="actually write (default is dry-run)")
     convert.set_defaults(func=cmd_convert_history)
+    sub.add_parser("backup-db", help="write today's database copy now").set_defaults(
+        func=cmd_backup_db
+    )
     sub.add_parser("worker", help="run the ingestion loop").set_defaults(func=cmd_worker)
     serve = sub.add_parser("serve", help="run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
