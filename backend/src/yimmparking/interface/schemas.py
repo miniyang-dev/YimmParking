@@ -72,6 +72,14 @@ class SearchMetaDTO(BaseModel):
     walking: Literal["google", "quota_exhausted", "unavailable"] = Field(
         description="Where the walking times came from; anything but google means straight-line"
     )
+    stale_sources: list[StaleSourceDTO] = Field(
+        description="Cities whose real-time feed has stopped; their lots all read as no data"
+    )
+
+
+class StaleSourceDTO(BaseModel):
+    city: Literal["taipei", "new_taipei"]
+    as_of: datetime | None = Field(description="Newest reading held for the city; null if none")
 
 
 class ParkingSearchResponse(BaseModel):
@@ -143,6 +151,7 @@ class SourceStatusDTO(BaseModel):
     city: Literal["taipei", "new_taipei"]
     lots: int
     availability_as_of: datetime | None
+    stale: bool = Field(description="No reading, or the newest is over an hour old")
 
 
 class UsageDTO(BaseModel):

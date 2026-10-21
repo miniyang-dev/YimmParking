@@ -48,6 +48,7 @@ class Settings:
     routes_endpoint: str | None
     route_cache_ttl_days: float
     history_days: int
+    alert_url: str | None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -80,4 +81,6 @@ class Settings:
             # Availability history (changes only) kept for a year: enough to see weekly and
             # seasonal patterns, at roughly 1.4 MB a day.
             history_days=int(env.get("YIMM_HISTORY_DAYS", "365")),
+            # Where a stopped feed is reported (plain-text POST, e.g. https://ntfy.sh/<topic>).
+            alert_url=env.get("YIMM_ALERT_URL") or None,
         )

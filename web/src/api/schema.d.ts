@@ -403,6 +403,11 @@ export interface components {
              * @enum {string}
              */
             walking: "google" | "quota_exhausted" | "unavailable";
+            /**
+             * Stale Sources
+             * @description Cities whose real-time feed has stopped; their lots all read as no data
+             */
+            stale_sources: components["schemas"]["StaleSourceDTO"][];
         };
         /**
          * SortMode
@@ -420,6 +425,24 @@ export interface components {
             lots: number;
             /** Availability As Of */
             availability_as_of: string | null;
+            /**
+             * Stale
+             * @description No reading, or the newest is over an hour old
+             */
+            stale: boolean;
+        };
+        /** StaleSourceDTO */
+        StaleSourceDTO: {
+            /**
+             * City
+             * @enum {string}
+             */
+            city: "taipei" | "new_taipei";
+            /**
+             * As Of
+             * @description Newest reading held for the city; null if none
+             */
+            as_of: string | null;
         };
         /** UsageDTO */
         UsageDTO: {

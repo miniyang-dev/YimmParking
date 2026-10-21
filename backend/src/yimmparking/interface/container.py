@@ -8,6 +8,7 @@ from datetime import timedelta
 
 import httpx
 
+from yimmparking.adapters.alert.webhook import LogOnlyAlerter, WebhookAlerter
 from yimmparking.adapters.clock import SystemClock
 from yimmparking.adapters.geocode.google import ENDPOINT as GEOCODE_ENDPOINT
 from yimmparking.adapters.geocode.google import GoogleGeocoder
@@ -20,6 +21,7 @@ from yimmparking.adapters.sources.new_taipei import NewTaipeiFeed
 from yimmparking.adapters.sources.taipei import TaipeiFeed
 from yimmparking.adapters.sources.youbike import NewTaipeiBikeFeed, TaipeiBikeFeed
 from yimmparking.adapters.store.sqlite import SqliteStore
+from yimmparking.application.feed_watch import FeedWatch
 from yimmparking.application.limits import (
     GEOCODING,
     PLACES_NEARBY,
@@ -31,6 +33,7 @@ from yimmparking.application.limits import (
 )
 from yimmparking.application.place_cache import CachedPlaces
 from yimmparking.application.ports import (
+    Alerter,
     Clock,
     Geocoder,
     ParkingFeed,
@@ -65,6 +68,7 @@ class Container:
     search_bikes: SearchNearbyBikes
     usage: UsageGate
     router: TravelRouter | None
+    feed_watch: FeedWatch
 
     @property
     def geocoder_configured(self) -> bool:
@@ -155,6 +159,10 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
                 router, store, clock, timedelta(days=settings.route_cache_ttl_days)
             )
 
+    alerter: Alerter = (
+        WebhookAlerter(http, settings.alert_url) if settings.alert_url else LogOnlyAlerter()
+    )
+
     return Container(
         settings=settings,
         http=http,
@@ -176,4 +184,5 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
         search_bikes=SearchNearbyBikes([TaipeiBikeFeed(http), NewTaipeiBikeFeed(http)], clock),
         usage=usage,
         router=router,
+        feed_watch=FeedWatch(store, clock, alerter),
     )

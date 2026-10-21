@@ -9,9 +9,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from yimmparking.adapters.alert.webhook import LogOnlyAlerter
 from yimmparking.adapters.geocode.google import GoogleGeocoder
 from yimmparking.adapters.places.google_places import GooglePlaces
 from yimmparking.adapters.store.sqlite import SqliteStore
+from yimmparking.application.feed_watch import FeedWatch
 from yimmparking.application.limits import (
     GEOCODING,
     PLACES_NEARBY,
@@ -132,6 +134,7 @@ def build(
         search_bikes=SearchNearbyBikes(bike_feeds or [], Clock()),
         usage=usage,
         router=router,  # type: ignore[arg-type]
+        feed_watch=FeedWatch(store, Clock(), LogOnlyAlerter()),
     )
 
 
@@ -182,6 +185,15 @@ def test_health_reports_sources(client: TestClient) -> None:
     assert taipei["lots"] == 3
     # New Taipei has no data in this fixture, so the service must say it is degraded.
     assert body["status"] == "degraded"
+    stale = {s["city"]: s["stale"] for s in body["sources"]}
+    assert stale == {"taipei": False, "new_taipei": True}
+
+
+def test_search_names_the_cities_whose_feed_has_stopped(client: TestClient) -> None:
+    body = client.get(
+        "/api/v1/parking/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}
+    ).json()
+    assert body["meta"]["stale_sources"] == [{"city": "new_taipei", "as_of": None}]
 
 
 def test_health_identifies_the_running_build(client: TestClient) -> None:

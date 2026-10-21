@@ -1,4 +1,5 @@
 import { bearingDeg, bikeState } from "../../domain/bikes";
+import { CITY_LABEL } from "../../domain/cities";
 import { formatDistance } from "../../domain/distance";
 import { directionsUrl, type Coordinate } from "../../domain/maps";
 import type { BikeResponse, BikeStation } from "../../domain/types";
@@ -77,7 +78,7 @@ function BikeCell({ station, now }: { station: BikeStation; now: Date }) {
 function MissingCities({ cities }: { cities: BikeResponse["unavailable_cities"] }) {
   const { t } = useI18n();
   if (cities.length === 0) return null;
-  const names = cities.map((city) => t(`bikes.city.${city}`)).join(t("bikes.city.join"));
+  const names = cities.map((city) => t(CITY_LABEL[city])).join(t("city.join"));
   return (
     <p className="note" role="status">
       {t("bikes.partial", { cities: names })}

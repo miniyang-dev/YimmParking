@@ -56,6 +56,12 @@ class Clock(Protocol):
     def now(self) -> datetime: ...
 
 
+class Alerter(Protocol):
+    """Tells the owner something needs attention (a push, a chat message...)."""
+
+    def send(self, subject: str, body: str) -> None: ...
+
+
 class ParkingFeed(Protocol):
     """One city's government feeds: static lot data plus real-time availability."""
 

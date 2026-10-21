@@ -84,12 +84,21 @@ def cmd_worker(_: argparse.Namespace) -> int:
                 _run_safely(
                     "availability", lambda: container.refresh_availability.run(dry_run=False)
                 )
+                _watch_feeds(container)
                 next_availability = now + settings.availability_interval_s
             time.sleep(5)
     except KeyboardInterrupt:
         return 0
     finally:
         container.close()
+
+
+def _watch_feeds(container: Container) -> None:
+    """Report a city whose real-time data has stopped moving; never stops the scheduler."""
+    try:
+        container.feed_watch.check()
+    except Exception:
+        log.exception("checking feed freshness failed")
 
 
 def _purge_expired(container: Container) -> None:

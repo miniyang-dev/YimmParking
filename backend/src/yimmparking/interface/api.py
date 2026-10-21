@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from yimmparking.application.feed_watch import source_statuses, stale_cities
 from yimmparking.application.limits import GEOCODING, PLACES_NEARBY, ROUTES_ELEMENTS
 from yimmparking.application.ports import (
     GeocodingError,
@@ -25,7 +26,6 @@ from yimmparking.application.search_bikes import BikeHit
 from yimmparking.domain.fee import hourly_car_rate
 from yimmparking.domain.food_category import category_of
 from yimmparking.domain.geo import GeoPoint, initial_bearing_deg
-from yimmparking.domain.model import City
 from yimmparking.domain.ranking import RankingPolicy, SortMode
 from yimmparking.domain.vendor import DEFAULT_SHOW, Preference, Vendor, VendorPick
 from yimmparking.interface.build_info import frontend_version, process_build_info
@@ -44,6 +44,7 @@ from yimmparking.interface.schemas import (
     ParkingSearchResponse,
     SearchMetaDTO,
     SourceStatusDTO,
+    StaleSourceDTO,
     UsageDTO,
 )
 from yimmparking.interface.settings import BACKEND_DIR, Settings
@@ -214,16 +215,16 @@ def create_app(container: Container | None = None, settings: Settings | None = N
     @app.get("/api/v1/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         ct = c()
-        as_of = ct.store.last_availability_at()
         sources = [
             SourceStatusDTO(
-                city=city.value,
-                lots=ct.store.lot_count(city),
-                availability_as_of=as_of.get(city),
+                city=s.city.value,
+                lots=s.lots,
+                availability_as_of=s.as_of,
+                stale=s.stale,
             )
-            for city in City
+            for s in source_statuses(ct.store, ct.clock.now())
         ]
-        ok = all(s.lots > 0 for s in sources)
+        ok = all(s.lots > 0 and not s.stale for s in sources)
         usage = [
             UsageDTO(
                 meter=meter,  # type: ignore[arg-type]
@@ -356,6 +357,10 @@ def create_app(container: Container | None = None, settings: Settings | None = N
                 count=len(result.hits),
                 pool_size=result.pool_size,
                 walking=result.walking.value,
+                stale_sources=[
+                    StaleSourceDTO(city=city.value, as_of=as_of)
+                    for city, as_of in stale_cities(ct.store, ct.clock.now()).items()
+                ],
             ),
         )
 

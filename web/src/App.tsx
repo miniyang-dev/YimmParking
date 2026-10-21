@@ -6,6 +6,7 @@ import type { Lot } from "./domain/types";
 import { serializePrefs } from "./domain/vendors";
 import { LotDetail } from "./features/detail/LotDetail";
 import { Legend, ResultSheet, SheetSkeleton } from "./features/results/ResultSheet";
+import { StaleNotice } from "./features/results/StaleNotice";
 import { SearchHeader } from "./features/search/SearchHeader";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { useI18n } from "./i18n";
@@ -178,6 +179,7 @@ export function App() {
                 ))}
               </p>
             )}
+            <StaleNotice stale={data.meta.stale_sources} lots={lots} />
             {lots.length === 0 ? (
               <p className="notice">{t("empty.none")}</p>
             ) : (
