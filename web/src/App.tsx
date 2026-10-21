@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "./api/client";
 import { formatDistance } from "./domain/distance";
 import { ageMinutes } from "./domain/availability";
+import { remember, type SavedPlace } from "./domain/places";
 import type { Lot } from "./domain/types";
 import { serializePrefs } from "./domain/vendors";
 import { LotDetail } from "./features/detail/LotDetail";
 import { Legend, ResultSheet, SheetSkeleton } from "./features/results/ResultSheet";
 import { StaleNotice } from "./features/results/StaleNotice";
+import { SavedPlaces } from "./features/search/SavedPlaces";
 import { SearchHeader } from "./features/search/SearchHeader";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { useI18n } from "./i18n";
 import type { StringKey } from "./i18n/strings";
+import { updatePlaces } from "./state/places";
 import { usePrefs } from "./state/prefs";
 import { useRoute } from "./state/route";
 import { useParkingSearch } from "./state/queries";
@@ -51,6 +54,8 @@ export function App() {
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState(false);
   const now = useNow(30_000);
+  // An address search is remembered once it resolves, with the coordinates it resolved to.
+  const rememberNextAddress = useRef(false);
 
   const data = search.data;
   const lots = useMemo(() => data?.results ?? [], [data]);
@@ -65,6 +70,23 @@ export function App() {
     return times.length ? new Date(Math.max(...times)).toISOString() : null;
   }, [lots]);
 
+  useEffect(() => {
+    if (!rememberNextAddress.current || !data || route.q === null) return;
+    rememberNextAddress.current = false;
+    const { lat, lng, label } = data.origin;
+    updatePlaces((list) => remember(list, { label: label ?? route.q ?? "", lat, lng }, Date.now()));
+  }, [data, route.q]);
+
+  function searchFrom(where: { label: string; lat: number; lng: number }, shownAs = where.label) {
+    rememberNextAddress.current = false;
+    updatePlaces((list) => remember(list, where, Date.now()));
+    setRoute({ q: null, lat: where.lat, lng: where.lng, label: shownAs, lot: null });
+  }
+
+  function pickPlace(place: SavedPlace) {
+    searchFrom(place, place.name ?? place.label);
+  }
+
   const age = ageMinutes(newestObservation, now);
   const asOfLabel = age === null ? null : age === 0 ? t("scale.asofNow") : t("scale.asof", { min: age });
   const radiusLabel = data ? t("scale.within", { radius: formatDistance(data.meta.radius_m) }) : null;
@@ -77,6 +99,7 @@ export function App() {
     }
     setLocating(true);
     setLocateError(false);
+    rememberNextAddress.current = false; // "my location" is not a place worth listing
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocating(false);
@@ -113,10 +136,13 @@ export function App() {
         onSettings={() => setRoute({ view: "settings" })}
         onSubmit={(text) => {
           setLocateError(false);
+          rememberNextAddress.current = true;
           setRoute({ q: text, lat: null, lng: null, label: null, lot: null });
         }}
         onLocate={locate}
         onMode={(mode) => setRoute({ mode }, { replace: true })}
+        savedPanel={route.q !== null || route.lat !== null}
+        onPickPlace={pickPlace}
       />
 
       <main className="main">
@@ -170,9 +196,7 @@ export function App() {
                     key={`${alt.lat},${alt.lng}`}
                     type="button"
                     className="textbtn"
-                    onClick={() =>
-                      setRoute({ q: null, lat: alt.lat, lng: alt.lng, label: alt.label, lot: null })
-                    }
+                    onClick={() => searchFrom(alt)}
                   >
                     {alt.label}
                   </button>
@@ -197,6 +221,7 @@ export function App() {
           <section className="empty">
             <h2>{t("empty.title")}</h2>
             <p>{t("empty.body")}</p>
+            <SavedPlaces onPick={pickPlace} />
           </section>
         )}
 

@@ -1432,3 +1432,110 @@ a {
     border-top: 1px solid var(--rule);
   }
 }
+
+/* ---- saved places: starred and recent ------------------------------------------------ */
+
+.saved {
+  padding: var(--space-3) 0 0;
+}
+
+.empty .saved {
+  padding-top: var(--space-5);
+}
+
+/* Also inside .empty, whose own h2 rule is larger. */
+.saved .saved__title {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.saved__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1.5px solid var(--rule);
+  background: var(--paper);
+}
+
+.saved__row {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--tap);
+  border-bottom: 1.5px solid var(--rule-soft);
+}
+
+.saved__icon {
+  flex: none;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.saved__pick {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved__pick:hover,
+.saved__icon:hover {
+  background: var(--hover);
+}
+
+.saved__name {
+  display: block;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved__label {
+  display: block;
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved__edit {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.saved__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 var(--space-2);
+  border: 1.5px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.saved__note {
+  margin-top: var(--space-2);
+  font-size: 12.5px;
+  color: var(--muted);
+}
