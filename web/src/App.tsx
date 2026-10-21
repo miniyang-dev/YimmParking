@@ -15,7 +15,7 @@ import { useI18n } from "./i18n";
 import type { StringKey } from "./i18n/strings";
 import { updatePlaces } from "./state/places";
 import { usePrefs } from "./state/prefs";
-import { useRoute } from "./state/route";
+import { takeLaunchLocate, useRoute } from "./state/route";
 import { useParkingSearch } from "./state/queries";
 import { useTheme } from "./state/theme";
 
@@ -118,6 +118,12 @@ export function App() {
       { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
     );
   }
+
+  // Opened from the home-screen icon: start from where the phone is.
+  useEffect(() => {
+    if (takeLaunchLocate()) locate();
+    // Once, on first render; `locate` only uses state setters and stable values.
+  }, []);
 
   const initialText = route.q ?? route.label ?? data?.origin.label ?? "";
 

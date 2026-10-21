@@ -50,6 +50,18 @@ export function serializeRoute(route: Route): string {
   return text ? `?${text}` : window.location.pathname;
 }
 
+/**
+ * True once when the page was opened to locate the phone (`?locate=1`, the installed app's start
+ * URL). The flag is removed from the address at once, so a reload or a later visit to this
+ * history entry does not ask for the location again.
+ */
+export function takeLaunchLocate(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("locate") !== "1") return false;
+  window.history.replaceState(null, "", serializeRoute(parseRoute(window.location.search)));
+  return true;
+}
+
 const EVENT = "yimm:route";
 
 function subscribe(onChange: () => void): () => void {
