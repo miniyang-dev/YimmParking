@@ -8,6 +8,8 @@ import { BRAND_LABEL, VENDOR_LABEL, type VendorKey } from "../../domain/vendors"
 import { useI18n } from "../../i18n";
 import type { StringKey } from "../../i18n/strings";
 import { SpaceCell } from "../../ui/SpaceCell";
+import { feePhrase } from "../../domain/lotText";
+import { symbolFor } from "../../ui/lotSymbol";
 import { Symbol, type SymbolKind } from "../../ui/Symbol";
 
 function sectionLabel(key: SectionKey): StringKey {
@@ -19,16 +21,6 @@ function sectionLabel(key: SectionKey): StringKey {
 /** Vendor sections share one band style; the other two have their own. */
 function bandClass(key: SectionKey): string {
   return key === "other" || key === "distance" ? `band--${key}` : "band--priority";
-}
-
-export function symbolFor(lot: Lot): SymbolKind {
-  if (lot.vendor === "iparking_dodohome") return "iparking";
-  if (lot.vendor) return "circle";
-  return "cross";
-}
-
-export function feeHeadline(lot: Lot, t: ReturnType<typeof useI18n>["t"]): string {
-  return lot.hourly_rate !== null ? t("fee.perHour", { rate: lot.hourly_rate }) : t("fee.unknown");
 }
 
 interface Props {
@@ -45,8 +37,11 @@ interface Props {
 export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Props) {
   const { t, locale } = useI18n();
   const sections = toSections(lots, mode);
+  // Each section continues the numbering of the one before it.
+  const firstNumber = sections.map((_, i) =>
+    sections.slice(0, i).reduce((n, s) => n + s.lots.length, 1),
+  );
   const routedCount = lots.filter((lot) => lot.walk_seconds !== null).length;
-  let index = 0;
 
   return (
     <div className="sheet">
@@ -56,7 +51,7 @@ export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Prop
         {walking === "quota_exhausted" && <span> · {t("walk.quota")}</span>}
         {walking === "unavailable" && <span> · {t("walk.unavailable")}</span>}
       </p>
-      {sections.map((section) => (
+      {sections.map((section, sectionIndex) => (
         <section key={section.key} aria-labelledby={`band-${section.key}`}>
           <h2 id={`band-${section.key}`} className={`band ${bandClass(section.key)}`}>
             <span>{t(sectionLabel(section.key))}</span>
@@ -72,13 +67,14 @@ export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Prop
               </tr>
             </thead>
             <tbody>
-              {section.lots.map((lot) => {
-                index += 1;
+              {section.lots.map((lot, i) => {
+                const number = (firstNumber[sectionIndex] ?? 1) + i;
                 const moving = trendPhrases(lot.trend, { quiet: true });
                 const hours = hoursPhrase(lot.hours);
+                const fee = feePhrase(lot);
                 return (
                   <tr key={lot.id} className="lots__row" onClick={() => onOpen(lot)}>
-                    <td className="lots__no">{index}</td>
+                    <td className="lots__no">{number}</td>
                     <td className="lots__sym">
                       <Symbol kind={symbolFor(lot)} />
                     </td>
@@ -101,7 +97,7 @@ export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Prop
                             {compassLabel(lot.bearing_deg, locale)}
                           </b>
                         )}
-                        <span>{feeHeadline(lot, t)}</span>
+                        <span>{t(fee.key, fee.vars)}</span>
                         {moving.length > 0 && (
                           <span className="lots__trend">
                             <span aria-hidden="true">{lot.trend?.direction === "filling" ? "↓ " : "↑ "}</span>
