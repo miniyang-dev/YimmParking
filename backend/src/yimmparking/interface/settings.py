@@ -51,6 +51,10 @@ class Settings:
     alert_url: str | None
     backup_dir: Path
     backup_keep: int
+    tdx_client_id: str | None
+    tdx_client_secret: str | None
+    tdx_token_url: str | None
+    tdx_api_base: str | None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -89,4 +93,11 @@ class Settings:
             # Daily copies sit next to the data folder (…/data/x.db → …/backup/), newest 7 kept.
             backup_dir=Path(env.get("YIMM_BACKUP_DIR") or db_path.parent.parent / "backup"),
             backup_keep=int(env.get("YIMM_BACKUP_KEEP", "7")),
+            # TDX (交通部運輸資料流通服務) credentials for on-street parking; without them the
+            # curb endpoint answers 503 and the web client hides the section.
+            tdx_client_id=env.get("TDX_CLIENT_ID") or None,
+            tdx_client_secret=env.get("TDX_CLIENT_SECRET") or None,
+            # Optional overrides for a local stand-in of TDX (UI testing).
+            tdx_token_url=env.get("YIMM_TDX_TOKEN_URL") or None,
+            tdx_api_base=env.get("YIMM_TDX_API_BASE") or None,
         )

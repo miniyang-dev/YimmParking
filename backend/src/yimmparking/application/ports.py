@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Protocol
 
+from yimmparking.domain.curb import CurbReading, CurbSegment
 from yimmparking.domain.geo import BoundingBox, GeoPoint
 from yimmparking.domain.model import (
     AvailabilityBatch,
@@ -40,6 +41,10 @@ class PlacesError(Exception):
 
 class RoutesError(Exception):
     """The routing provider answered with an error or is not configured."""
+
+
+class CurbUnconfigured(Exception):
+    """No TDX credentials are set, so on-street parking cannot be read."""
 
 
 class QuotaExceeded(Exception):
@@ -78,6 +83,16 @@ class BikeFeed(Protocol):
     city: City
 
     def fetch_stations(self) -> list[BikeStation]: ...
+
+
+class CurbFeed(Protocol):
+    """One city's on-street parking: segments (rarely change) and live free spaces."""
+
+    city: City
+
+    def fetch_segments(self) -> list[CurbSegment]: ...
+
+    def fetch_availability(self) -> dict[str, CurbReading]: ...
 
 
 class IParkingDirectory(Protocol):

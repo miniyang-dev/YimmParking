@@ -27,6 +27,7 @@ from yimmparking.application.ports import SourceError
 from yimmparking.application.refresh import RefreshAvailability, RefreshLots
 from yimmparking.application.search import ResolveAddress, SearchNearbyFood, SearchNearbyParking
 from yimmparking.application.search_bikes import SearchNearbyBikes
+from yimmparking.application.search_curb import SearchNearbyCurb
 from yimmparking.domain.geo import GeoPoint
 from yimmparking.domain.model import (
     AvailabilityBatch,
@@ -88,6 +89,7 @@ def build(
     places_limit: int = 900,
     router: object | None = None,
     bike_feeds: list[Any] | None = None,
+    curb_feeds: list[Any] | None = None,
 ) -> Container:
     http = httpx.Client(transport=transport or httpx.MockTransport(lambda r: httpx.Response(500)))
     store = SqliteStore(":memory:")
@@ -137,6 +139,9 @@ def build(
         router=router,  # type: ignore[arg-type]
         feed_watch=FeedWatch(store, Clock(), LogOnlyAlerter()),
         insights=LotInsights(store, Clock()),
+        search_curb=SearchNearbyCurb(
+            curb_feeds or [], Clock(), configured=curb_feeds is not None  # type: ignore[arg-type]
+        ),
     )
 
 
@@ -525,3 +530,42 @@ def test_typical_day_has_a_value_per_half_hour_once_there_is_enough_history(
 def test_typical_day_refuses_what_is_not_a_lot_id(client: TestClient, lot: str) -> None:
     r = client.get("/api/v1/parking/typical", params={"lot": lot})
     assert r.status_code == 422 and r.json()["error"]["code"] == "invalid_lot"
+
+
+def test_curb_without_tdx_credentials_is_503_unconfigured(client: TestClient) -> None:
+    r = client.get("/api/v1/curb/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng})
+    assert r.status_code == 503 and r.json()["error"]["code"] == "curb_unconfigured"
+
+
+def test_curb_nearby_lists_segments_with_counts() -> None:
+    from yimmparking.domain.curb import (
+        CurbFullness,
+        CurbReading,
+        CurbSegment,
+        CurbService,
+        SpaceKind,
+    )
+
+    class CurbFeed:
+        city = City.TAIPEI
+
+        def fetch_segments(self) -> list[CurbSegment]:
+            return [
+                CurbSegment("taipei:1", City.TAIPEI, "松高路", GeoPoint(CENTER.lat + 0.001, CENTER.lng))
+            ]
+
+        def fetch_availability(self) -> dict[str, CurbReading]:
+            return {
+                "taipei:1": CurbReading(
+                    "taipei:1", 20, 0, SpaceKind.CAR, CurbFullness.FULL, CurbService.OPEN, NOW
+                )
+            }
+
+    container = build("k", curb_feeds=[CurbFeed()])
+    with TestClient(create_app(container=container)) as c:
+        body = c.get("/api/v1/curb/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}).json()
+    container.close()
+    [seg] = body["results"]
+    assert (seg["name"], seg["available"], seg["total"], seg["space_kind"]) == ("松高路", 0, 20, "car")
+    assert (seg["fullness"], seg["service"]) == ("full", "open")
+    assert 100 <= seg["distance_m"] <= 120 and body["unavailable_cities"] == []

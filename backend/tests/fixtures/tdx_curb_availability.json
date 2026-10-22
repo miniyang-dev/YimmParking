@@ -1,0 +1,35 @@
+{
+  "UpdateTime": "2026-10-22T11:30:00+08:00",
+  "UpdateInterval": 60,
+  "SrcUpdateTime": "2026-10-22T11:29:30+08:00",
+  "SrcUpdateInterval": 60,
+  "AuthorityCode": "TPE",
+  "Items": [
+    {
+      "ParkingSegmentID": "00105",
+      "ParkingSegmentName": { "Zh_tw": "松高路(松智路至松仁路)", "En": "Songgao Rd." },
+      "TotalSpaces": 30,
+      "AvailableSpaces": 12,
+      "Availabilities": [
+        { "SpaceType": 1, "NumberOfSpaces": 20, "AvailableSpaces": 4, "Occupancy": "0.8" },
+        { "SpaceType": 2, "NumberOfSpaces": 10, "AvailableSpaces": 8 }
+      ],
+      "ServiceStatus": 1,
+      "FullStatus": 1,
+      "ChargeStatus": 1,
+      "DataCollectTime": "2026-10-22T11:29:00+08:00"
+    },
+    {
+      "ParkingSegmentID": "00200",
+      "ParkingSegmentName": { "Zh_tw": "未知車位路段" },
+      "TotalSpaces": 15,
+      "AvailableSpaces": -1,
+      "Availabilities": [],
+      "ServiceStatus": 3,
+      "FullStatus": 0,
+      "ChargeStatus": 3,
+      "DataCollectTime": "2026-10-22T11:29:00+08:00"
+    }
+  ],
+  "Count": 2
+}

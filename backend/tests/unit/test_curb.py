@@ -1,0 +1,300 @@
+"""On-street parking from TDX: token handling, paging, parsing, and the nearby search.
+
+The fixtures follow the field names of TDX's Parking OpenAPI document (OnStreet group); they are
+hand-built from that schema, not recorded. Replace them with recorded responses once a key is
+available, and re-run these tests against them.
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
+from urllib.parse import parse_qs
+
+import httpx
+import pytest
+
+from yimmparking.adapters.tdx.client import PAGE_SIZE, TdxClient
+from yimmparking.adapters.tdx.curb import TdxCurbFeed, parse_availability, parse_segment
+from yimmparking.application.ports import CurbUnconfigured, SourceError
+from yimmparking.application.search_curb import LIVE_TTL, SearchNearbyCurb
+from yimmparking.domain.curb import (
+    CurbFullness,
+    CurbReading,
+    CurbSegment,
+    CurbService,
+    SpaceKind,
+)
+from yimmparking.domain.geo import GeoPoint
+from yimmparking.domain.model import City
+
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+SEGMENTS = json.loads((FIXTURES / "tdx_curb_segments.json").read_text(encoding="utf-8"))
+LIVE = json.loads((FIXTURES / "tdx_curb_availability.json").read_text(encoding="utf-8"))
+TOKEN_URL = "https://tdx.example/token"
+API = "https://tdx.example/api"
+
+
+class Tdx:
+    """A stand-in TDX: counts token requests and records data requests."""
+
+    def __init__(self, *, token_status: int = 200, expires_in: int = 86400) -> None:
+        self.tokens = 0
+        self.token_status = token_status
+        self.expires_in = expires_in
+        self.data: list[httpx.Request] = []
+        self.pages: dict[str, list[list[dict[str, Any]]]] = {}
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        if str(request.url) == TOKEN_URL:
+            self.tokens += 1
+            form = parse_qs(request.content.decode())
+            assert form["grant_type"] == ["client_credentials"]
+            assert form["client_id"] == ["id"] and form["client_secret"] == ["secret"]
+            if self.token_status != 200:
+                return httpx.Response(self.token_status, json={"error": "invalid_client"})
+            return httpx.Response(
+                200, json={"access_token": f"tok{self.tokens}", "expires_in": self.expires_in}
+            )
+        self.data.append(request)
+        path = request.url.path
+        if "ParkingSegmentAvailability" in path:
+            return httpx.Response(200, json=LIVE)
+        if path in self.pages:
+            skip = int(request.url.params["$skip"])
+            pages = self.pages[path]
+            index = skip // PAGE_SIZE
+            return httpx.Response(200, json={"Items": pages[index] if index < len(pages) else []})
+        return httpx.Response(200, json=SEGMENTS)
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.at = datetime(2026, 10, 22, 3, 30, tzinfo=UTC)
+        self.mono = 0.0
+
+    def now(self) -> datetime:
+        return self.at
+
+    def monotonic(self) -> float:
+        return self.mono
+
+
+def client(tdx: Tdx, clock: Clock | None = None, *, secret: str | None = "secret") -> TdxClient:
+    http = httpx.Client(transport=httpx.MockTransport(tdx))
+    return TdxClient(
+        http,
+        "id",
+        secret,
+        token_url=TOKEN_URL,
+        api_base=API,
+        monotonic=(clock or Clock()).monotonic,
+    )
+
+
+class TestClient:
+    def test_one_token_serves_many_calls_and_is_renewed_before_it_expires(self) -> None:
+        tdx, clock = Tdx(expires_in=3600), Clock()
+        feed = TdxCurbFeed(client(tdx, clock), City.TAIPEI)
+        feed.fetch_segments()
+        feed.fetch_availability()
+        assert tdx.tokens == 1
+        assert tdx.data[0].headers["authorization"] == "Bearer tok1"
+
+        clock.mono += 3600 - 300  # inside the renewal margin
+        feed.fetch_availability()
+        assert tdx.tokens == 2
+        assert tdx.data[-1].headers["authorization"] == "Bearer tok2"
+
+    def test_requests_ask_for_json_and_name_the_city(self) -> None:
+        tdx = Tdx()
+        TdxCurbFeed(client(tdx), City.NEW_TAIPEI).fetch_segments()
+        [request] = tdx.data
+        assert request.url.path == "/api/v1/Parking/OnStreet/ParkingSegment/City/NewTaipei"
+        assert request.url.params["$format"] == "JSON"
+        assert request.url.params["$top"] == str(PAGE_SIZE)
+
+    def test_every_page_is_read(self) -> None:
+        tdx = Tdx()
+        path = "/api/v1/Parking/OnStreet/ParkingSegment/City/Taipei"
+        row = SEGMENTS["Items"][0]
+        tdx.pages[path] = [[row] * PAGE_SIZE, [row] * 3]
+        rows = client(tdx).get_items("v1/Parking/OnStreet/ParkingSegment/City/Taipei")
+        assert len(rows) == PAGE_SIZE + 3
+        assert [r.url.params["$skip"] for r in tdx.data] == ["0", str(PAGE_SIZE)]
+
+    def test_without_credentials_nothing_is_sent(self) -> None:
+        tdx = Tdx()
+        with pytest.raises(CurbUnconfigured):
+            TdxCurbFeed(client(tdx, secret=None), City.TAIPEI).fetch_segments()
+        assert tdx.tokens == 0 and tdx.data == []
+
+    def test_a_refused_token_is_an_error_that_does_not_repeat_the_secret(self) -> None:
+        with pytest.raises(SourceError) as caught:
+            TdxCurbFeed(client(Tdx(token_status=401)), City.TAIPEI).fetch_segments()
+        assert "401" in str(caught.value) and "secret" not in str(caught.value)
+
+
+class TestParsing:
+    def test_segment_name_position_and_fare(self) -> None:
+        segment = parse_segment(SEGMENTS["Items"][0], City.TAIPEI)
+        assert segment == CurbSegment(
+            id="taipei:00105",
+            city=City.TAIPEI,
+            name="松高路(松智路至松仁路)",
+            location=GeoPoint(25.0392, 121.567),
+            description="南側",
+            fare="小型車每小時30元，08:00-20:00收費",
+            town="信義區",
+        )
+
+    def test_a_segment_without_a_position_is_dropped(self) -> None:
+        assert parse_segment(SEGMENTS["Items"][1], City.TAIPEI) is None
+
+    def test_the_car_space_reading_is_preferred_over_the_all_types_total(self) -> None:
+        reading = parse_availability(LIVE["Items"][0], City.TAIPEI)
+        assert reading is not None
+        assert (reading.total, reading.available, reading.kind) == (20, 4, SpaceKind.CAR)
+        assert reading.fullness is CurbFullness.ALMOST_FULL
+        assert reading.service is CurbService.OPEN
+        assert reading.observed_at == datetime(2026, 10, 22, 3, 29, tzinfo=UTC)
+
+    def test_minus_one_is_unknown_never_zero(self) -> None:
+        reading = parse_availability(LIVE["Items"][1], City.TAIPEI)
+        assert reading is not None
+        assert (reading.total, reading.available, reading.kind) == (15, None, SpaceKind.ALL)
+        assert reading.service is CurbService.OUTSIDE_HOURS
+        assert reading.fullness is CurbFullness.AVAILABLE
+
+    def test_unexpected_status_codes_are_unknown(self) -> None:
+        row = {**LIVE["Items"][0], "FullStatus": 9, "ServiceStatus": None}
+        reading = parse_availability(row, City.TAIPEI)
+        assert reading is not None
+        assert reading.fullness is CurbFullness.UNKNOWN
+        assert reading.service is CurbService.UNKNOWN
+
+
+# ---- the nearby search ------------------------------------------------------------------------
+
+ORIGIN = GeoPoint(25.0375, 121.5637)
+
+
+def segment(sid: str, north_m: float, city: City = City.TAIPEI) -> CurbSegment:
+    return CurbSegment(
+        id=f"{city.value}:{sid}",
+        city=city,
+        name=sid,
+        location=GeoPoint(ORIGIN.lat + north_m / 111_195, ORIGIN.lng),
+    )
+
+
+def reading(sid: str, available: int | None, city: City = City.TAIPEI) -> CurbReading:
+    return CurbReading(
+        segment_id=f"{city.value}:{sid}",
+        total=10,
+        available=available,
+        kind=SpaceKind.CAR,
+        fullness=CurbFullness.AVAILABLE,
+        service=CurbService.OPEN,
+        observed_at=None,
+    )
+
+
+class Feed:
+    def __init__(
+        self,
+        segments: list[CurbSegment] | Exception,
+        live: dict[str, CurbReading] | Exception,
+        city: City = City.TAIPEI,
+    ) -> None:
+        self.city, self.segments, self.live = city, segments, live
+        self.segment_calls = self.live_calls = 0
+
+    def fetch_segments(self) -> list[CurbSegment]:
+        self.segment_calls += 1
+        if isinstance(self.segments, Exception):
+            raise self.segments
+        return self.segments
+
+    def fetch_availability(self) -> dict[str, CurbReading]:
+        self.live_calls += 1
+        if isinstance(self.live, Exception):
+            raise self.live
+        return self.live
+
+
+class TestSearch:
+    def test_nearest_segments_with_their_live_counts(self) -> None:
+        feed = Feed(
+            [segment("far", 700), segment("b", 250), segment("a", 100)],
+            {"taipei:a": reading("a", 3)},
+        )
+        found = SearchNearbyCurb([feed], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+        assert (found.radius_m, found.expanded) == (300, False)
+        assert [h.segment.name for h in found.hits] == ["a", "b"]
+        assert found.hits[0].reading is not None and found.hits[0].reading.available == 3
+        assert found.hits[1].reading is None  # no live count: "no data", not zero
+
+    def test_widens_once_when_nothing_is_close(self) -> None:
+        feed = Feed([segment("x", 450)], {})
+        found = SearchNearbyCurb([feed], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+        assert (found.radius_m, found.expanded, len(found.hits)) == (600, True, 1)
+
+    def test_segments_are_read_daily_and_counts_every_two_minutes(self) -> None:
+        feed, clock = Feed([segment("a", 100)], {}), Clock()
+        search = SearchNearbyCurb([feed], clock)  # type: ignore[list-item]
+        search.execute(ORIGIN)
+        search.execute(ORIGIN)
+        assert (feed.segment_calls, feed.live_calls) == (1, 1)
+        clock.at += LIVE_TTL
+        search.execute(ORIGIN)
+        assert (feed.segment_calls, feed.live_calls) == (1, 2)
+        clock.at += timedelta(hours=24)
+        search.execute(ORIGIN)
+        assert feed.segment_calls == 2
+
+    def test_one_city_down_leaves_the_other_and_says_so(self) -> None:
+        taipei = Feed([segment("a", 100)], {})
+        new_taipei = Feed(SourceError("down"), SourceError("down"), City.NEW_TAIPEI)
+        found = SearchNearbyCurb([taipei, new_taipei], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+        assert [h.segment.name for h in found.hits] == ["a"]
+        assert found.missing == (City.NEW_TAIPEI,)
+
+    def test_live_counts_down_still_lists_segments_without_counts(self) -> None:
+        feed = Feed([segment("a", 100)], SourceError("down"))
+        found = SearchNearbyCurb([feed], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+        assert found.hits[0].reading is None and found.missing == (City.TAIPEI,)
+
+    def test_nothing_readable_is_an_error(self) -> None:
+        feed = Feed(SourceError("down"), SourceError("down"))
+        with pytest.raises(SourceError):
+            SearchNearbyCurb([feed], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+
+    def test_without_credentials_it_says_unconfigured(self) -> None:
+        with pytest.raises(CurbUnconfigured):
+            SearchNearbyCurb([], Clock(), configured=False).execute(ORIGIN)
+
+
+def test_a_failed_token_fails_fast_for_a_minute_then_is_tried_again() -> None:
+    tdx, clock = Tdx(token_status=500), Clock()
+    tdx_client = client(tdx, clock)
+    for _ in range(3):
+        with pytest.raises(SourceError):
+            tdx_client.get_items("v1/x")
+    assert tdx.tokens == 1  # the second city of a search does not wait out another timeout
+    clock.mono += 61
+    tdx.token_status = 200
+    assert tdx_client.get_items("v1/Parking/OnStreet/ParkingSegment/City/Taipei")
+    assert tdx.tokens == 2
+
+
+def test_segments_that_failed_are_tried_again_after_minutes_not_a_day() -> None:
+    feed, clock = Feed(SourceError("down"), {}), Clock()
+    search = SearchNearbyCurb([feed], clock)  # type: ignore[list-item]
+    with pytest.raises(SourceError):
+        search.execute(ORIGIN)
+    feed.segments = [segment("a", 100)]
+    clock.at += timedelta(minutes=3)
+    assert [h.segment.name for h in search.execute(ORIGIN).hits] == ["a"]

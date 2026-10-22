@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/curb/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Curb Nearby */
+        get: operations["curb_nearby_api_v1_curb_nearby_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/parking/typical": {
         parameters: {
             query?: never;
@@ -196,6 +213,71 @@ export interface components {
              * Observed At
              * @description When the feed says the reading was taken
              */
+            observed_at: string | null;
+        };
+        /** CurbSearchResponse */
+        CurbSearchResponse: {
+            origin: components["schemas"]["OriginDTO"];
+            /**
+             * Radius M
+             * @description The radius searched (300, or 600 if widened)
+             */
+            radius_m: number;
+            /** Expanded */
+            expanded: boolean;
+            /** Results */
+            results: components["schemas"]["CurbSegmentDTO"][];
+            /** Unavailable Cities */
+            unavailable_cities: ("taipei" | "new_taipei")[];
+        };
+        /** CurbSegmentDTO */
+        CurbSegmentDTO: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Fare */
+            fare: string;
+            /** Town */
+            town: string;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+            /**
+             * Distance M
+             * @description Straight-line distance to the segment's marker point
+             */
+            distance_m: number;
+            /**
+             * Total
+             * @description Spaces on the segment; null when TDX gave none
+             */
+            total: number | null;
+            /**
+             * Available
+             * @description Free spaces now; null = no data, never zero
+             */
+            available: number | null;
+            /**
+             * Space Kind
+             * @description car: the car-space count; all: an all-types total that may include scooters
+             * @enum {string}
+             */
+            space_kind: "car" | "all";
+            /**
+             * Fullness
+             * @enum {string}
+             */
+            fullness: "available" | "almost_full" | "full" | "overcrowded" | "unknown";
+            /**
+             * Service
+             * @enum {string}
+             */
+            service: "open" | "resting" | "suspended" | "outside_hours" | "unknown";
+            /** Observed At */
             observed_at: string | null;
         };
         /** ErrorBody */
@@ -845,6 +927,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BikeSearchResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    curb_nearby_api_v1_curb_nearby_get: {
+        parameters: {
+            query: {
+                /** @description WGS84 latitude (Taiwan) */
+                lat: number;
+                /** @description WGS84 longitude (Taiwan) */
+                lng: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurbSearchResponse"];
                 };
             };
             /** @description Not Found */

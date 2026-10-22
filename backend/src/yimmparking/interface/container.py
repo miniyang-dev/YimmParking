@@ -21,6 +21,10 @@ from yimmparking.adapters.sources.new_taipei import NewTaipeiFeed
 from yimmparking.adapters.sources.taipei import TaipeiFeed
 from yimmparking.adapters.sources.youbike import NewTaipeiBikeFeed, TaipeiBikeFeed
 from yimmparking.adapters.store.sqlite import SqliteStore
+from yimmparking.adapters.tdx.client import API_BASE as TDX_API_BASE
+from yimmparking.adapters.tdx.client import TOKEN_URL as TDX_TOKEN_URL
+from yimmparking.adapters.tdx.client import TdxClient
+from yimmparking.adapters.tdx.curb import TdxCurbFeed
 from yimmparking.application.feed_watch import FeedWatch
 from yimmparking.application.insights import LotInsights
 from yimmparking.application.limits import (
@@ -49,6 +53,8 @@ from yimmparking.application.search import (
     SearchNearbyParking,
 )
 from yimmparking.application.search_bikes import SearchNearbyBikes
+from yimmparking.application.search_curb import SearchNearbyCurb
+from yimmparking.domain.model import City
 from yimmparking.interface.settings import Settings
 
 
@@ -71,6 +77,7 @@ class Container:
     router: TravelRouter | None
     feed_watch: FeedWatch
     insights: LotInsights
+    search_curb: SearchNearbyCurb
 
     @property
     def geocoder_configured(self) -> bool:
@@ -161,6 +168,17 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
                 router, store, clock, timedelta(days=settings.route_cache_ttl_days)
             )
 
+    tdx = TdxClient(
+        http,
+        settings.tdx_client_id,
+        settings.tdx_client_secret,
+        token_url=settings.tdx_token_url or TDX_TOKEN_URL,
+        api_base=settings.tdx_api_base or TDX_API_BASE,
+    )
+    curb = SearchNearbyCurb(
+        [TdxCurbFeed(tdx, city) for city in City], clock, configured=tdx.configured
+    )
+
     alerter: Alerter = (
         WebhookAlerter(http, settings.alert_url) if settings.alert_url else LogOnlyAlerter()
     )
@@ -188,4 +206,5 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
         router=router,
         feed_watch=FeedWatch(store, clock, alerter),
         insights=LotInsights(store, clock),
+        search_curb=curb,
     )

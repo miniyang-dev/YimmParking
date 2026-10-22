@@ -185,6 +185,33 @@ class BikeSearchResponse(BaseModel):
     )
 
 
+class CurbSegmentDTO(BaseModel):
+    id: str
+    name: str
+    description: str
+    fare: str
+    town: str
+    lat: float
+    lng: float
+    distance_m: int = Field(description="Straight-line distance to the segment's marker point")
+    total: int | None = Field(description="Spaces on the segment; null when TDX gave none")
+    available: int | None = Field(description="Free spaces now; null = no data, never zero")
+    space_kind: Literal["car", "all"] = Field(
+        description="car: the car-space count; all: an all-types total that may include scooters"
+    )
+    fullness: Literal["available", "almost_full", "full", "overcrowded", "unknown"]
+    service: Literal["open", "resting", "suspended", "outside_hours", "unknown"]
+    observed_at: datetime | None
+
+
+class CurbSearchResponse(BaseModel):
+    origin: OriginDTO
+    radius_m: int = Field(description="The radius searched (300, or 600 if widened)")
+    expanded: bool
+    results: list[CurbSegmentDTO]
+    unavailable_cities: list[Literal["taipei", "new_taipei"]]
+
+
 class SourceStatusDTO(BaseModel):
     city: Literal["taipei", "new_taipei"]
     lots: int

@@ -1,5 +1,5 @@
 import type { components } from "./schema";
-import type { BikeResponse, FoodResponse, SearchResponse, SortMode } from "../domain/types";
+import type { BikeResponse, CurbResponse, FoodResponse, SearchResponse, SortMode } from "../domain/types";
 
 export class ApiError extends Error {
   constructor(
@@ -51,6 +51,9 @@ export const api = {
 
   typical: (lot: string, signal?: AbortSignal) =>
     getJson<components["schemas"]["TypicalDayResponse"]>("/api/v1/parking/typical", { lot }, signal),
+
+  curb: (lat: number, lng: number, signal?: AbortSignal) =>
+    getJson<CurbResponse>("/api/v1/curb/nearby", { lat, lng }, signal),
 
   bikes: (lat: number, lng: number, signal?: AbortSignal) =>
     getJson<BikeResponse>("/api/v1/bikes/nearby", { lat, lng }, signal),

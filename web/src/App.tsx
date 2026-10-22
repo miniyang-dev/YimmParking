@@ -7,6 +7,7 @@ import type { Lot } from "./domain/types";
 import { serializePrefs } from "./domain/vendors";
 import { LotDetail } from "./features/detail/LotDetail";
 import { Legend, ResultSheet, SheetSkeleton } from "./features/results/ResultSheet";
+import { CurbSection } from "./features/results/CurbSection";
 import { StaleNotice } from "./features/results/StaleNotice";
 import { SavedPlaces } from "./features/search/SavedPlaces";
 import { SearchHeader } from "./features/search/SearchHeader";
@@ -222,6 +223,7 @@ export function App() {
                 onOpen={(lot) => setRoute({ lot: lot.id })}
               />
             )}
+            <CurbSection origin={{ lat: data.origin.lat, lng: data.origin.lng }} />
           </>
         ) : (
           <section className="empty">

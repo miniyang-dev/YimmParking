@@ -85,3 +85,19 @@ export function useTypicalDay(lot: string) {
     retry: retryFree,
   });
 }
+
+/**
+ * On-street parking near the search origin (TDX). Free to us; the server holds the live counts
+ * for two minutes, so asking more often gains nothing.
+ */
+export function useCurb(lat: number, lng: number) {
+  return useQuery({
+    queryKey: ["curb", lat.toFixed(5), lng.toFixed(5)],
+    queryFn: ({ signal }) => api.curb(lat, lng, signal),
+    staleTime: 120_000,
+    gcTime: 5 * 60_000,
+    // Missing credentials will not fix themselves on a retry.
+    retry: (count, error) =>
+      error instanceof ApiError && error.code === "curb_unconfigured" ? false : retryFree(count, error),
+  });
+}

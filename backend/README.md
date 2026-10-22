@@ -121,6 +121,22 @@ above, checks every old reading against the rebuilt history, then drops the old 
 the file; on any mismatch nothing is changed. Without `--yes` it opens the database read-only and
 only reports. Stop the API and the worker first, and back the file up.
 
+## Street parking (TDX)
+
+Metered road segments near the search origin, from MOTC TDX's OnStreet API
+(`/v1/Parking/OnStreet/ParkingSegment/City/{City}` and `.../ParkingSegmentAvailability/City/{City}`,
+Taipei and NewTaipei). Set `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET` (free TDX member key); without them
+the endpoint answers 503 and the client hides the section.
+
+- Token: OAuth client credentials, cached until shortly before `expires_in`; a failed token request
+  fails fast for a minute instead of each city waiting out a timeout.
+- Segments are read once a day, live counts at most every 2 minutes per city; a failed read is
+  retried after 2 minutes, and served from the last copy meanwhile (up to 30 minutes for counts).
+- Counts: the car-space reading (`SpaceType` 1) when given, else the all-types total, labelled as such.
+  `-1` is "unknown", never zero. Distance is straight-line to the segment's marker point.
+- The parsing was written from TDX's OpenAPI document; `tests/fixtures/tdx_curb_*.json` are built
+  from that schema, not recorded. Replace them with recorded responses once a key is in use.
+
 ## Data caveats
 
 - No operator field exists in either feed; brand is inferred from name, then phone number.

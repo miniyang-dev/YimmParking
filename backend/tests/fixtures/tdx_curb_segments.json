@@ -1,0 +1,36 @@
+{
+  "UpdateTime": "2026-10-22T11:00:00+08:00",
+  "UpdateInterval": 86400,
+  "SrcUpdateTime": "2026-10-22T03:00:00+08:00",
+  "SrcUpdateInterval": 86400,
+  "AuthorityCode": "TPE",
+  "VersionID": 1,
+  "Items": [
+    {
+      "ParkingSegmentID": "00105",
+      "ParkingSegmentName": { "Zh_tw": "松高路(松智路至松仁路)", "En": "Songgao Rd." },
+      "RoadSection": { "Start": "松智路", "End": "松仁路" },
+      "ParkingSegmentPosition": { "PositionLat": 25.03920, "PositionLon": 121.56700 },
+      "Geometry": "LINESTRING(121.5665 25.0392,121.5675 25.0392)",
+      "Description": "南側",
+      "FareDescription": "小型車每小時30元，08:00-20:00收費",
+      "HasChargingPoint": 0,
+      "City": "Taipei",
+      "CityCode": "TPE",
+      "TownName": "信義區",
+      "TownID": "6300200"
+    },
+    {
+      "ParkingSegmentID": "00777",
+      "ParkingSegmentName": { "Zh_tw": "沒座標路段", "En": null },
+      "Description": "",
+      "FareDescription": "",
+      "HasChargingPoint": 0,
+      "City": "Taipei",
+      "CityCode": "TPE",
+      "TownName": "信義區",
+      "TownID": "6300200"
+    }
+  ],
+  "Count": 2
+}

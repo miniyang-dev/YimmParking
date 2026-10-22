@@ -17,6 +17,7 @@ from yimmparking.application.feed_watch import source_statuses, stale_cities
 from yimmparking.application.insights import LotInsight
 from yimmparking.application.limits import GEOCODING, PLACES_NEARBY, ROUTES_ELEMENTS
 from yimmparking.application.ports import (
+    CurbUnconfigured,
     GeocodingError,
     GeocodingUnavailable,
     PlacesError,
@@ -25,6 +26,7 @@ from yimmparking.application.ports import (
 )
 from yimmparking.application.search import FoodHit, ParkingHit
 from yimmparking.application.search_bikes import BikeHit
+from yimmparking.application.search_curb import CurbHit
 from yimmparking.domain.fee import hourly_car_rate
 from yimmparking.domain.food_category import category_of
 from yimmparking.domain.geo import GeoPoint, initial_bearing_deg
@@ -40,6 +42,8 @@ from yimmparking.interface.schemas import (
     AvailabilityDTO,
     BikeSearchResponse,
     BikeStationDTO,
+    CurbSearchResponse,
+    CurbSegmentDTO,
     ErrorResponse,
     FoodDTO,
     FoodSearchResponse,
@@ -172,6 +176,26 @@ def to_food_dto(hit: FoodHit) -> FoodDTO:
         category=category_of(p.primary_type_code).value,
         open_now=p.open_now,
         maps_uri=p.maps_uri,
+    )
+
+
+def to_curb_dto(hit: CurbHit) -> CurbSegmentDTO:
+    s, r = hit.segment, hit.reading
+    return CurbSegmentDTO(
+        id=s.id,
+        name=s.name,
+        description=s.description,
+        fare=s.fare,
+        town=s.town,
+        lat=s.location.lat,
+        lng=s.location.lng,
+        distance_m=round(hit.distance_m),
+        total=r.total if r else None,
+        available=r.available if r else None,
+        space_kind=r.kind.value if r else "all",
+        fullness=r.fullness.value if r else "unknown",
+        service=r.service.value if r else "unknown",
+        observed_at=r.observed_at if r else None,
     )
 
 
@@ -361,6 +385,22 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             radius_m=found.radius_m,
             expanded=found.expanded,
             results=[to_bike_dto(h) for h in found.hits],
+            unavailable_cities=[city.value for city in found.missing],
+        )
+
+    @app.get("/api/v1/curb/nearby", response_model=CurbSearchResponse, responses=responses)
+    def curb_nearby(lat: Lat, lng: Lng) -> CurbSearchResponse:
+        try:
+            found = c().search_curb.execute(GeoPoint(lat, lng))
+        except CurbUnconfigured as exc:
+            raise ApiError(503, "curb_unconfigured", str(exc)) from exc
+        except SourceError as exc:
+            raise ApiError(502, "curb_unavailable", str(exc)) from exc
+        return CurbSearchResponse(
+            origin=OriginDTO(lat=lat, lng=lng),
+            radius_m=found.radius_m,
+            expanded=found.expanded,
+            results=[to_curb_dto(h) for h in found.hits],
             unavailable_cities=[city.value for city in found.missing],
         )
 
