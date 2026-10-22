@@ -49,6 +49,9 @@ export const api = {
   nearby: (lat: number, lng: number, mode: SortMode, vendors: string, signal?: AbortSignal) =>
     getJson<SearchResponse>("/api/v1/parking/nearby", { lat, lng, mode, vendors }, signal),
 
+  typical: (lot: string, signal?: AbortSignal) =>
+    getJson<components["schemas"]["TypicalDayResponse"]>("/api/v1/parking/typical", { lot }, signal),
+
   bikes: (lat: number, lng: number, signal?: AbortSignal) =>
     getJson<BikeResponse>("/api/v1/bikes/nearby", { lat, lng }, signal),
 

@@ -123,6 +123,16 @@ class PlaceCache(Protocol):
     def purge_expired_places(self, now: datetime) -> int: ...
 
 
+class AvailabilityHistory(Protocol):
+    """The change-only availability history (times are whole UTC seconds)."""
+
+    def availability_changes(self, lot_id: str, since: datetime) -> list[tuple[int, int | None]]:
+        """`(at_s, count)` from `since` on, led by the change in force at `since`."""
+
+    def feed_polls(self, city: City, since: datetime) -> list[int]:
+        """When the city's feed was read with a new timestamp, from `since` on."""
+
+
 class QuotaStore(Protocol):
     """Durable per-period call counters, so a limit survives restarts."""
 

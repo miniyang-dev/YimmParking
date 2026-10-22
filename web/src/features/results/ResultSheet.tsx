@@ -1,6 +1,7 @@
 import { compassLabel } from "../../domain/compass";
 import { formatDistance } from "../../domain/distance";
 import { walkMinutes } from "../../domain/walk";
+import { DOUBT_SHORT, hoursPhrase, trendPhrases } from "../../domain/insight";
 import { toSections, type SectionKey } from "../../domain/grouping";
 import type { Lot, SortMode } from "../../domain/types";
 import { BRAND_LABEL, VENDOR_LABEL, type VendorKey } from "../../domain/vendors";
@@ -73,6 +74,8 @@ export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Prop
             <tbody>
               {section.lots.map((lot) => {
                 index += 1;
+                const moving = trendPhrases(lot.trend, { quiet: true });
+                const hours = hoursPhrase(lot.hours);
                 return (
                   <tr key={lot.id} className="lots__row" onClick={() => onOpen(lot)}>
                     <td className="lots__no">{index}</td>
@@ -99,6 +102,18 @@ export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Prop
                           </b>
                         )}
                         <span>{feeHeadline(lot, t)}</span>
+                        {moving.length > 0 && (
+                          <span className="lots__trend">
+                            <span aria-hidden="true">{lot.trend?.direction === "filling" ? "↓ " : "↑ "}</span>
+                            {moving.map((p) => t(p.key, p.vars)).join("，")}
+                          </span>
+                        )}
+                        {hours && <span className="lots__hours">{t(hours.key, hours.vars)}</span>}
+                        {lot.doubts.map((doubt) => (
+                          <span key={doubt} className="lots__doubt">
+                            {t(DOUBT_SHORT[doubt])}
+                          </span>
+                        ))}
                         {lot.brand !== "other" && (
                           <span className="lots__brand">
                             {lot.iparking ? `${t("brand.iparking")} ` : ""}

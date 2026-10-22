@@ -16,6 +16,23 @@ class AvailabilityDTO(BaseModel):
     suspect: bool = Field(description="Reading exceeds the lot's listed capacity; treat as rough")
 
 
+class TrendDTO(BaseModel):
+    minutes: int = Field(description="The window compared, e.g. the last 30 minutes")
+    delta: int = Field(description="Spaces now minus spaces `minutes` ago; negative = filling")
+    direction: Literal["filling", "emptying", "steady"]
+    full_in_min: int | None = Field(
+        description="At this pace, minutes until full (filling only, up to 2 hours); else null"
+    )
+
+
+class HoursDTO(BaseModel):
+    status: Literal["always", "open", "closing_soon", "closed", "unknown"] = Field(
+        description="From the service time when it is a plain daily range; else unknown"
+    )
+    opens_at: str | None = Field(description="HH:MM when closed now")
+    closes_at: str | None = Field(description="HH:MM when closing within 2 hours")
+
+
 class ParkingLotDTO(BaseModel):
     id: str
     name: str
@@ -50,6 +67,27 @@ class ParkingLotDTO(BaseModel):
     kind: str
     ev_charging_spaces: int | None
     accessible_spaces: int | None
+    trend: TrendDTO | None = Field(
+        description="How the count moved lately; null when the history cannot tell"
+    )
+    doubts: list[Literal["frozen", "over_capacity", "often_missing"]] = Field(
+        description="Reasons from the last week's readings to treat the number with care"
+    )
+    hours: HoursDTO
+
+
+class TypicalSlotDTO(BaseModel):
+    minute: int = Field(description="Minutes after local midnight")
+    median: float | None = Field(description="Usual spaces left; null with too few past days")
+    samples: int
+
+
+class TypicalDayResponse(BaseModel):
+    lot_id: str
+    weekday: int = Field(ge=0, le=6, description="0 = Monday … 6 = Sunday")
+    days_used: int = Field(description="Past days of this weekday that had readings")
+    min_days: int = Field(description="Readings a half hour needs before it shows a value")
+    slots: list[TypicalSlotDTO]
 
 
 class OriginDTO(BaseModel):

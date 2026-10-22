@@ -75,3 +75,13 @@ export function useFood(
     ...PAID,
   });
 }
+
+/** A lot's usual day, from our own history: free, and it changes slowly. */
+export function useTypicalDay(lot: string) {
+  return useQuery({
+    queryKey: ["typical", lot],
+    queryFn: ({ signal }) => api.typical(lot, signal),
+    staleTime: 30 * 60_000,
+    retry: retryFree,
+  });
+}

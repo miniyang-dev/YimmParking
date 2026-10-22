@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/parking/typical": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Parking Typical */
+        get: operations["parking_typical_api_v1_parking_typical_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -277,6 +294,25 @@ export interface components {
             /** Started At */
             started_at: string;
         };
+        /** HoursDTO */
+        HoursDTO: {
+            /**
+             * Status
+             * @description From the service time when it is a plain daily range; else unknown
+             * @enum {string}
+             */
+            status: "always" | "open" | "closing_soon" | "closed" | "unknown";
+            /**
+             * Opens At
+             * @description HH:MM when closed now
+             */
+            opens_at: string | null;
+            /**
+             * Closes At
+             * @description HH:MM when closing within 2 hours
+             */
+            closes_at: string | null;
+        };
         /** OriginDTO */
         OriginDTO: {
             /** Lat */
@@ -368,6 +404,14 @@ export interface components {
             ev_charging_spaces: number | null;
             /** Accessible Spaces */
             accessible_spaces: number | null;
+            /** @description How the count moved lately; null when the history cannot tell */
+            trend: components["schemas"]["TrendDTO"] | null;
+            /**
+             * Doubts
+             * @description Reasons from the last week's readings to treat the number with care
+             */
+            doubts: ("frozen" | "over_capacity" | "often_missing")[];
+            hours: components["schemas"]["HoursDTO"];
         };
         /** ParkingSearchResponse */
         ParkingSearchResponse: {
@@ -443,6 +487,66 @@ export interface components {
              * @description Newest reading held for the city; null if none
              */
             as_of: string | null;
+        };
+        /** TrendDTO */
+        TrendDTO: {
+            /**
+             * Minutes
+             * @description The window compared, e.g. the last 30 minutes
+             */
+            minutes: number;
+            /**
+             * Delta
+             * @description Spaces now minus spaces `minutes` ago; negative = filling
+             */
+            delta: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "filling" | "emptying" | "steady";
+            /**
+             * Full In Min
+             * @description At this pace, minutes until full (filling only, up to 2 hours); else null
+             */
+            full_in_min: number | null;
+        };
+        /** TypicalDayResponse */
+        TypicalDayResponse: {
+            /** Lot Id */
+            lot_id: string;
+            /**
+             * Weekday
+             * @description 0 = Monday … 6 = Sunday
+             */
+            weekday: number;
+            /**
+             * Days Used
+             * @description Past days of this weekday that had readings
+             */
+            days_used: number;
+            /**
+             * Min Days
+             * @description Readings a half hour needs before it shows a value
+             */
+            min_days: number;
+            /** Slots */
+            slots: components["schemas"]["TypicalSlotDTO"][];
+        };
+        /** TypicalSlotDTO */
+        TypicalSlotDTO: {
+            /**
+             * Minute
+             * @description Minutes after local midnight
+             */
+            minute: number;
+            /**
+             * Median
+             * @description Usual spaces left; null with too few past days
+             */
+            median: number | null;
+            /** Samples */
+            samples: number;
         };
         /** UsageDTO */
         UsageDTO: {
@@ -741,6 +845,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BikeSearchResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    parking_typical_api_v1_parking_typical_get: {
+        parameters: {
+            query: {
+                /** @description Lot id, e.g. taipei:TPE0044 */
+                lot: string;
+                /** @description 0 = Monday */
+                weekday?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TypicalDayResponse"];
                 };
             };
             /** @description Not Found */

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import FastAPI, Query, Request
@@ -13,6 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from yimmparking.application.feed_watch import source_statuses, stale_cities
+from yimmparking.application.insights import LotInsight
 from yimmparking.application.limits import GEOCODING, PLACES_NEARBY, ROUTES_ELEMENTS
 from yimmparking.application.ports import (
     GeocodingError,
@@ -26,6 +28,9 @@ from yimmparking.application.search_bikes import BikeHit
 from yimmparking.domain.fee import hourly_car_rate
 from yimmparking.domain.food_category import category_of
 from yimmparking.domain.geo import GeoPoint, initial_bearing_deg
+from yimmparking.domain.hours import hours_now
+from yimmparking.domain.model import City
+from yimmparking.domain.occupancy import MIN_WEEKS, Trend
 from yimmparking.domain.ranking import RankingPolicy, SortMode
 from yimmparking.domain.vendor import DEFAULT_SHOW, Preference, Vendor, VendorPick
 from yimmparking.interface.build_info import frontend_version, process_build_info
@@ -39,12 +44,16 @@ from yimmparking.interface.schemas import (
     FoodDTO,
     FoodSearchResponse,
     HealthResponse,
+    HoursDTO,
     OriginDTO,
     ParkingLotDTO,
     ParkingSearchResponse,
     SearchMetaDTO,
     SourceStatusDTO,
     StaleSourceDTO,
+    TrendDTO,
+    TypicalDayResponse,
+    TypicalSlotDTO,
     UsageDTO,
 )
 from yimmparking.interface.settings import BACKEND_DIR, Settings
@@ -88,9 +97,23 @@ def parse_vendors(raw: str | None) -> Preference:
         raise ApiError(422, "invalid_vendors", str(exc)) from exc
 
 
-def to_lot_dto(hit: ParkingHit, origin: GeoPoint) -> ParkingLotDTO:
+def to_trend_dto(trend: Trend | None) -> TrendDTO | None:
+    if trend is None:
+        return None
+    return TrendDTO(
+        minutes=trend.minutes,
+        delta=trend.delta,
+        direction=trend.direction.value,
+        full_in_min=trend.full_in_min,
+    )
+
+
+def to_lot_dto(
+    hit: ParkingHit, origin: GeoPoint, insight: LotInsight, now: datetime
+) -> ParkingLotDTO:
     r, a = hit.ranked, hit.availability
     lot = r.lot
+    hours = hours_now(lot.service_time, now)
     return ParkingLotDTO(
         id=lot.id,
         name=lot.name,
@@ -123,6 +146,11 @@ def to_lot_dto(hit: ParkingHit, origin: GeoPoint) -> ParkingLotDTO:
         kind=lot.kind,
         ev_charging_spaces=lot.ev_charging_spaces,
         accessible_spaces=lot.accessible_spaces,
+        trend=to_trend_dto(insight.trend),
+        doubts=[d.value for d in insight.doubts],
+        hours=HoursDTO(
+            status=hours.status.value, opens_at=hours.opens_at, closes_at=hours.closes_at
+        ),
     )
 
 
@@ -336,6 +364,30 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             unavailable_cities=[city.value for city in found.missing],
         )
 
+    @app.get("/api/v1/parking/typical", response_model=TypicalDayResponse, responses=responses)
+    def parking_typical(
+        lot: Annotated[str, Query(max_length=80, description="Lot id, e.g. taipei:TPE0044")],
+        weekday: Annotated[int | None, Query(ge=0, le=6, description="0 = Monday")] = None,
+    ) -> TypicalDayResponse:
+        city_text, _, source_id = lot.partition(":")
+        try:
+            city = City(city_text)
+        except ValueError as exc:
+            raise ApiError(422, "invalid_lot", f"not a lot id: {lot!r}") from exc
+        if not source_id:
+            raise ApiError(422, "invalid_lot", f"not a lot id: {lot!r}")
+        day = c().insights.typical(lot, city, weekday)
+        return TypicalDayResponse(
+            lot_id=lot,
+            weekday=day.weekday,
+            days_used=day.days_used,
+            min_days=MIN_WEEKS,
+            slots=[
+                TypicalSlotDTO(minute=s.minute, median=s.median, samples=s.samples)
+                for s in day.slots
+            ],
+        )
+
     def _search(
         ct: Container,
         center: GeoPoint,
@@ -347,10 +399,14 @@ def create_app(container: Container | None = None, settings: Settings | None = N
     ) -> ParkingSearchResponse:
         policy = RankingPolicy(mode=mode, preference=preference)
         result = ct.search_parking.execute(center, policy)
+        insights = ct.insights.for_hits(result.hits)
+        now = ct.clock.now()
         return ParkingSearchResponse(
             origin=OriginDTO(lat=center.lat, lng=center.lng, label=label),
             alternatives=alternatives,
-            results=[to_lot_dto(h, center) for h in result.hits],
+            results=[
+                to_lot_dto(h, center, insights[h.ranked.lot.id], now) for h in result.hits
+            ],
             meta=SearchMetaDTO(
                 radius_m=result.radius_m,
                 mode=mode.value,

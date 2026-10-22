@@ -245,3 +245,35 @@ def convert(conn: sqlite3.Connection, *, write: bool) -> Conversion:
         raise
     report.verified = report.written = True
     return report
+
+
+# ---- reading it back ----------------------------------------------------------------------
+
+
+def changes_since(
+    conn: sqlite3.Connection, lot_id: str, since_s: int
+) -> list[tuple[int, int | None]]:
+    """A lot's changes from `since_s` on, led by the last change before it (the value in force
+    at `since_s`)."""
+    rows = conn.execute(
+        """
+        SELECT c.observed_s, c.count
+        FROM availability_change c JOIN lot_key k ON k.key = c.lot_key
+        WHERE k.lot_id = ?1 AND c.observed_s >= COALESCE(
+            (SELECT MAX(c2.observed_s) FROM availability_change c2
+             WHERE c2.lot_key = k.key AND c2.observed_s < ?2),
+            ?2)
+        ORDER BY c.observed_s
+        """,
+        (lot_id, since_s),
+    ).fetchall()
+    return [(int(at), count) for at, count in rows]
+
+
+def polls_since(conn: sqlite3.Connection, city: str, since_s: int) -> list[int]:
+    rows = conn.execute(
+        "SELECT observed_s FROM availability_poll WHERE city = ? AND observed_s >= ? "
+        "ORDER BY observed_s",
+        (city, since_s),
+    ).fetchall()
+    return [int(at) for (at,) in rows]

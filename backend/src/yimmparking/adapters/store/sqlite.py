@@ -258,6 +258,14 @@ class SqliteStore:
                 [(r.lot_id, batch.city.value, r.count, observed) for r in batch.readings],
             )
 
+    def availability_changes(self, lot_id: str, since: datetime) -> list[tuple[int, int | None]]:
+        with self._lock:
+            return history.changes_since(self._conn, lot_id, history.to_seconds(since))
+
+    def feed_polls(self, city: City, since: datetime) -> list[int]:
+        with self._lock:
+            return history.polls_since(self._conn, city.value, history.to_seconds(since))
+
     def purge_history(self, now: datetime, keep: timedelta) -> int:
         with self._lock, self._conn:
             return history.purge(self._conn, now - keep)

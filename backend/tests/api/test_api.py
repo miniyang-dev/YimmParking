@@ -14,6 +14,7 @@ from yimmparking.adapters.geocode.google import GoogleGeocoder
 from yimmparking.adapters.places.google_places import GooglePlaces
 from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.application.feed_watch import FeedWatch
+from yimmparking.application.insights import LotInsights
 from yimmparking.application.limits import (
     GEOCODING,
     PLACES_NEARBY,
@@ -135,6 +136,7 @@ def build(
         usage=usage,
         router=router,  # type: ignore[arg-type]
         feed_watch=FeedWatch(store, Clock(), LogOnlyAlerter()),
+        insights=LotInsights(store, Clock()),
     )
 
 
@@ -495,3 +497,31 @@ def test_invalid_vendor_settings_are_refused(client: TestClient, vendors: str) -
     )
     assert r.status_code == 422
     assert r.json()["error"]["code"] == "invalid_vendors"
+
+
+def test_each_lot_carries_its_hours_trend_and_doubts(client: TestClient) -> None:
+    body = client.get(
+        "/api/v1/parking/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}
+    ).json()
+    lot = body["results"][0]
+    assert lot["hours"]["status"] in {"always", "open", "closing_soon", "closed", "unknown"}
+    # One reading so far: the history cannot tell a trend or judge the number yet.
+    assert lot["trend"] is None
+    assert lot["doubts"] == []
+
+
+def test_typical_day_has_a_value_per_half_hour_once_there_is_enough_history(
+    client: TestClient,
+) -> None:
+    body = client.get(
+        "/api/v1/parking/typical", params={"lot": "taipei:a", "weekday": 4}
+    ).json()
+    assert (body["lot_id"], body["weekday"], body["min_days"]) == ("taipei:a", 4, 3)
+    assert len(body["slots"]) == 48
+    assert body["days_used"] == 0 and all(s["median"] is None for s in body["slots"])
+
+
+@pytest.mark.parametrize("lot", ["nowhere:1", "taipei:", "taipei"])
+def test_typical_day_refuses_what_is_not_a_lot_id(client: TestClient, lot: str) -> None:
+    r = client.get("/api/v1/parking/typical", params={"lot": lot})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "invalid_lot"

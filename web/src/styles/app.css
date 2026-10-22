@@ -1539,3 +1539,136 @@ a {
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ---- what the history says: movement, doubts, hours, a usual day --------------------- */
+
+.lots__trend,
+.lots__hours {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lots__doubt {
+  font-style: italic;
+}
+
+.spaces__hours {
+  font-weight: 700;
+}
+
+.move__trend,
+.move__doubt {
+  padding: var(--space-3) var(--space-4) 0;
+  font-size: 14px;
+}
+
+.move__trend {
+  font-weight: 700;
+}
+
+.move__doubt {
+  color: var(--muted);
+}
+
+.move:last-child,
+.move .move__doubt:last-child,
+.move .move__trend:last-child {
+  padding-bottom: var(--space-3);
+}
+
+.share {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 var(--space-4);
+}
+
+.share__said {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.typical__chart {
+  display: block;
+  width: calc(100% - 2 * var(--space-4));
+  max-width: 560px;
+  height: auto;
+  margin: var(--space-3) var(--space-4) 0;
+  touch-action: pan-y;
+}
+
+.typical__grid {
+  stroke: var(--rule-soft);
+  stroke-width: 1;
+}
+
+.typical__base {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.typical__tick,
+.typical__now {
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--muted);
+}
+
+.typical__now {
+  font-family: var(--font-text);
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.typical__bar {
+  fill: var(--muted);
+  opacity: 0.55;
+}
+
+.typical__bar--now,
+.typical__bar--focus {
+  fill: var(--ink);
+  opacity: 1;
+}
+
+.typical__readout {
+  padding: var(--space-2) var(--space-4) 0;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.typical__hint {
+  padding: 2px var(--space-4) 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.typical__table {
+  margin: var(--space-2) var(--space-4) var(--space-3);
+  font-size: 13px;
+}
+
+.typical__table summary {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.typical__table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.typical__table th,
+.typical__table td {
+  padding: 4px var(--space-2);
+  border-bottom: 1px solid var(--rule-soft);
+  text-align: left;
+}

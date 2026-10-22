@@ -22,6 +22,7 @@ from yimmparking.adapters.sources.taipei import TaipeiFeed
 from yimmparking.adapters.sources.youbike import NewTaipeiBikeFeed, TaipeiBikeFeed
 from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.application.feed_watch import FeedWatch
+from yimmparking.application.insights import LotInsights
 from yimmparking.application.limits import (
     GEOCODING,
     PLACES_NEARBY,
@@ -69,6 +70,7 @@ class Container:
     usage: UsageGate
     router: TravelRouter | None
     feed_watch: FeedWatch
+    insights: LotInsights
 
     @property
     def geocoder_configured(self) -> bool:
@@ -185,4 +187,5 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
         usage=usage,
         router=router,
         feed_watch=FeedWatch(store, clock, alerter),
+        insights=LotInsights(store, clock),
     )

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../api/client";
 import { ageMinutes } from "../../domain/availability";
 import { compassLabel } from "../../domain/compass";
+import { hoursPhrase } from "../../domain/insight";
 import { formatDistance } from "../../domain/distance";
 import {
   categoryCounts,
@@ -22,6 +23,9 @@ import { useFood } from "../../state/queries";
 import { useSpin } from "../../state/useSpin";
 import { SpaceCell } from "../../ui/SpaceCell";
 import { BikeSection } from "./BikeSection";
+import { Movement } from "./Movement";
+import { ShareButton } from "./ShareButton";
+import { TypicalDay } from "./TypicalDay";
 import { Symbol } from "../../ui/Symbol";
 import { feeHeadline, symbolFor } from "../results/ResultSheet";
 
@@ -389,6 +393,7 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
           : null;
 
   const dial = lot.phone ? dialable(lot.phone) : null;
+  const hours = hoursPhrase(lot.hours);
   const facts: [string, string][] = [[t("detail.hours"), lot.service_time || "—"]];
   if (lot.total_car !== null && lot.total_car > 0) facts.push([t("detail.capacity"), String(lot.total_car)]);
   if (lot.ev_charging_spaces) facts.push([t("detail.ev"), String(lot.ev_charging_spaces)]);
@@ -459,8 +464,11 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
         <p className="spaces__text">
           {age !== null && a.state === "known" ? t("spaces.ago", { min: age }) : ""}
           {warning && <span className="spaces__warn">{warning}</span>}
+          {hours && <span className="spaces__hours">{t(hours.key, hours.vars)}</span>}
         </p>
       </div>
+
+      <Movement lot={lot} />
 
       <a
         className="go"
@@ -474,6 +482,9 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
         {t("detail.navigate")}
       </a>
       <p className="go__from">{t("detail.navFrom", { origin: originLabel })}</p>
+      <ShareButton title={lot.name} text={[lot.name, lot.address].filter(Boolean).join("・")} />
+
+      <TypicalDay key={`typical-${lot.id}`} lotId={lot.id} now={now} />
 
 
       <BikeSection key={`bikes-${lot.id}`} lot={lot} now={now} />
