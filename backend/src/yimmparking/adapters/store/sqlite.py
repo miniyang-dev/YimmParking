@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 from yimmparking.adapters.store import history
-from yimmparking.application.search import GEOCODE_CACHE_TTL
 from yimmparking.domain.geo import BoundingBox, GeoPoint
 from yimmparking.domain.model import (
     AvailabilityBatch,
@@ -414,7 +413,7 @@ class SqliteStore:
     # Only coordinates and the place id are stored — never the formatted address — which is the
     # part of a Google geocode result its terms allow to be cached, and only for a limited time.
 
-    def get(self, key: str, now: datetime) -> list[GeocodeCandidate] | None:
+    def get_geocode(self, key: str, now: datetime) -> list[GeocodeCandidate] | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT payload, expires_at FROM geocode_cache WHERE key = ?", (key,)
@@ -430,7 +429,9 @@ class SqliteStore:
             for item in json.loads(row["payload"])
         ]
 
-    def put(self, key: str, candidates: list[GeocodeCandidate], now: datetime) -> None:
+    def put_geocode(
+        self, key: str, candidates: list[GeocodeCandidate], now: datetime, ttl: timedelta
+    ) -> None:
         payload = json.dumps(
             [
                 {"lat": c.location.lat, "lng": c.location.lng, "place_id": c.place_id}
@@ -440,10 +441,10 @@ class SqliteStore:
         with self._lock, self._conn:
             self._conn.execute(
                 "INSERT OR REPLACE INTO geocode_cache (key, payload, expires_at) VALUES (?,?,?)",
-                (key, payload, _iso(now + GEOCODE_CACHE_TTL)),
+                (key, payload, _iso(now + ttl)),
             )
 
-    def purge_expired(self, now: datetime) -> int:
+    def purge_expired_geocodes(self, now: datetime) -> int:
         with self._lock, self._conn:
             cur = self._conn.execute(
                 "DELETE FROM geocode_cache WHERE expires_at <= ?", (_iso(now),)

@@ -311,8 +311,8 @@ class TestResolveAddress:
         geocoder = self.CountingGeocoder()
         ResolveAddress(geocoder, store, FixedClock(self.now)).execute("市府路1號")
         later = self.now + GEOCODE_CACHE_TTL + timedelta(seconds=1)
-        assert store.get(normalize_address("市府路1號"), later) is None
-        assert store.purge_expired(later) == 1
+        assert store.get_geocode(normalize_address("市府路1號"), later) is None
+        assert store.purge_expired_geocodes(later) == 1
         ResolveAddress(geocoder, store, FixedClock(later)).execute("市府路1號")
         assert geocoder.calls == 2
 

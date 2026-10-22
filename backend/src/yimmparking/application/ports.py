@@ -39,6 +39,10 @@ class PlacesError(Exception):
     """The places provider answered with an error or is not configured."""
 
 
+class PlacesUnavailable(PlacesError):
+    """No places provider is configured: nothing to retry until a key is set."""
+
+
 class RoutesError(Exception):
     """The routing provider answered with an error or is not configured."""
 
@@ -104,11 +108,13 @@ class Geocoder(Protocol):
 
 
 class GeocodeCache(Protocol):
-    def get(self, key: str, now: datetime) -> list[GeocodeCandidate] | None: ...
+    def get_geocode(self, key: str, now: datetime) -> list[GeocodeCandidate] | None: ...
 
-    def put(self, key: str, candidates: list[GeocodeCandidate], now: datetime) -> None: ...
+    def put_geocode(
+        self, key: str, candidates: list[GeocodeCandidate], now: datetime, ttl: timedelta
+    ) -> None: ...
 
-    def purge_expired(self, now: datetime) -> int: ...
+    def purge_expired_geocodes(self, now: datetime) -> int: ...
 
 
 class TravelRouter(Protocol):

@@ -153,12 +153,12 @@ class ResolveAddress:
         if not key:
             return []
         now = self._clock.now()
-        cached = self._cache.get(key, now)
+        cached = self._cache.get_geocode(key, now)
         if cached is not None:
             return cached
         candidates = self._geocoder.geocode(query.strip())
         if candidates:
-            self._cache.put(key, candidates, now)
+            self._cache.put_geocode(key, candidates, now, GEOCODE_CACHE_TTL)
         return candidates
 
 

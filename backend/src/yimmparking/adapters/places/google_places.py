@@ -25,7 +25,7 @@ from typing import Any
 
 import httpx
 
-from yimmparking.application.ports import PlacesError
+from yimmparking.application.ports import PlacesError, PlacesUnavailable
 from yimmparking.domain.geo import GeoPoint, bounding_box
 from yimmparking.domain.model import Place, RouteTime
 from yimmparking.domain.opening import MINUTES_PER_WEEK, OpeningPeriod, minutes_of
@@ -155,7 +155,7 @@ class GooglePlaces:
         origin: GeoPoint | None = None,
     ) -> list[Place]:
         if not self._api_key:
-            raise PlacesError("GOOGLE_MAPS_API_KEY is not configured")
+            raise PlacesUnavailable("GOOGLE_MAPS_API_KEY is not configured")
         # Text Search only restricts to a rectangle; the caller trims the corners by distance.
         box = bounding_box(center, radius_m)
         body: dict[str, Any] = {

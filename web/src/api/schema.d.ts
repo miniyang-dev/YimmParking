@@ -214,6 +214,11 @@ export interface components {
              * @description When the feed says the reading was taken
              */
             observed_at: string | null;
+            /**
+             * Bearing Deg
+             * @description Compass bearing from the query point
+             */
+            bearing_deg: number;
         };
         /** CurbSearchResponse */
         CurbSearchResponse: {

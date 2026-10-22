@@ -424,6 +424,7 @@ def test_bikes_nearby_lists_stations_by_distance() -> None:
     assert [r["name"] for r in body["results"]] == ["站near", "站far"]
     near = body["results"][0]
     assert near["rent"] == 0 and near["ret"] == 6  # zero is a real reading, not "no data"
+    assert near["bearing_deg"] in (0, 359)  # due north of the query point
     assert 100 <= near["distance_m"] <= 120
 
 
@@ -569,3 +570,33 @@ def test_curb_nearby_lists_segments_with_counts() -> None:
     assert (seg["name"], seg["available"], seg["total"], seg["space_kind"]) == ("松高路", 0, 20, "car")
     assert (seg["fullness"], seg["service"]) == ("full", "open")
     assert 100 <= seg["distance_m"] <= 120 and body["unavailable_cities"] == []
+
+
+@pytest.mark.parametrize(
+    ("vendors", "says"),
+    [("和停:2", "not a configurable vendor: '和停'"), ("liantong:9", "liantong: count must be 0 to 8")],
+)
+def test_a_refused_vendor_setting_says_which_part_is_wrong(
+    client: TestClient, vendors: str, says: str
+) -> None:
+    r = client.get(
+        "/api/v1/parking/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng, "vendors": vendors}
+    )
+    assert r.status_code == 422 and says in r.json()["error"]["message"]
+
+
+def test_health_lists_every_metered_api() -> None:
+    container = build("k")
+    with TestClient(create_app(container=container)) as c:
+        meters = [u["meter"] for u in c.get("/api/v1/health").json()["usage"]]
+    container.close()
+    assert meters == list(container.usage.meters)
+    assert set(meters) == {"geocoding", "places_nearby", "routes_elements"}
+
+
+def test_a_places_provider_error_is_502_not_503() -> None:
+    container = build("k")  # a key is set; the provider answers 500
+    with TestClient(create_app(container=container)) as c:
+        r = c.get("/api/v1/food/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng})
+    container.close()
+    assert r.status_code == 502 and r.json()["error"]["code"] == "places_unavailable"

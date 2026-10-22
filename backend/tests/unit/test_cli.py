@@ -20,7 +20,7 @@ class FlakyStore:
     def __init__(self) -> None:
         self.purged: list[str] = []
 
-    def purge_expired(self, now: datetime) -> int:
+    def purge_expired_geocodes(self, now: datetime) -> int:
         raise sqlite3.OperationalError("database is locked")
 
     def purge_expired_places(self, now: datetime) -> int:

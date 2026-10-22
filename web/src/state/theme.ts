@@ -23,9 +23,16 @@ export function useTheme(): { theme: Theme; cycle: () => void } {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", themeColor(theme, systemPrefersDark()));
+    const paint = () =>
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", themeColor(theme, systemPrefersDark()));
+    paint();
+    // "Auto" follows the system: repaint the browser chrome when the system switches.
+    if (theme !== "auto" || typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    query.addEventListener("change", paint);
+    return () => query.removeEventListener("change", paint);
   }, [theme]);
 
   const cycle = useCallback(() => {

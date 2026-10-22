@@ -15,12 +15,12 @@ from fastapi.staticfiles import StaticFiles
 
 from yimmparking.application.feed_watch import source_statuses, stale_cities
 from yimmparking.application.insights import LotInsight
-from yimmparking.application.limits import GEOCODING, PLACES_NEARBY, ROUTES_ELEMENTS
 from yimmparking.application.ports import (
     CurbUnconfigured,
     GeocodingError,
     GeocodingUnavailable,
     PlacesError,
+    PlacesUnavailable,
     QuotaExceeded,
     SourceError,
 )
@@ -34,7 +34,7 @@ from yimmparking.domain.hours import hours_now
 from yimmparking.domain.model import City
 from yimmparking.domain.occupancy import MIN_WEEKS, Trend
 from yimmparking.domain.ranking import RankingPolicy, SortMode
-from yimmparking.domain.vendor import DEFAULT_SHOW, Preference, Vendor, VendorPick
+from yimmparking.domain.vendor import DEFAULT_SHOW, MAX_SHOW, Preference, Vendor, VendorPick
 from yimmparking.interface.build_info import frontend_version, process_build_info
 from yimmparking.interface.container import Container, build_container
 from yimmparking.interface.schemas import (
@@ -92,9 +92,15 @@ def parse_vendors(raw: str | None) -> Preference:
     for part in raw.split(","):
         key, has_count, count = part.strip().partition(":")
         try:
-            picks.append(VendorPick(Vendor(key), int(count) if has_count else DEFAULT_SHOW))
+            vendor = Vendor(key)
         except ValueError as exc:
-            raise ApiError(422, "invalid_vendors", f"not a configurable vendor: {part!r}") from exc
+            raise ApiError(422, "invalid_vendors", f"not a configurable vendor: {key!r}") from exc
+        try:
+            picks.append(VendorPick(vendor, int(count) if has_count else DEFAULT_SHOW))
+        except ValueError as exc:
+            raise ApiError(
+                422, "invalid_vendors", f"{key}: count must be 0 to {MAX_SHOW}, got {count!r}"
+            ) from exc
     try:
         return Preference.from_picks(picks)
     except ValueError as exc:
@@ -199,7 +205,7 @@ def to_curb_dto(hit: CurbHit) -> CurbSegmentDTO:
     )
 
 
-def to_bike_dto(hit: BikeHit) -> BikeStationDTO:
+def to_bike_dto(hit: BikeHit, origin: GeoPoint) -> BikeStationDTO:
     s = hit.station
     return BikeStationDTO(
         id=s.id,
@@ -211,6 +217,7 @@ def to_bike_dto(hit: BikeHit) -> BikeStationDTO:
         rent=s.rent,
         ret=s.ret,
         observed_at=s.observed_at,
+        bearing_deg=int(round(initial_bearing_deg(origin, s.location))) % 360,
     )
 
 
@@ -282,13 +289,9 @@ def create_app(container: Container | None = None, settings: Settings | None = N
                 meter=meter,  # type: ignore[arg-type]
                 period=ct.usage.period,
                 used=ct.usage.used(meter),
-                limit=limit,
+                limit=ct.usage.limit(meter),
             )
-            for meter, limit in (
-                (GEOCODING, ct.usage.limit(GEOCODING)),
-                (PLACES_NEARBY, ct.usage.limit(PLACES_NEARBY)),
-                (ROUTES_ELEMENTS, ct.usage.limit(ROUTES_ELEMENTS)),
-            )
+            for meter in ct.usage.meters
         ]
         return HealthResponse(
             status="ok" if ok else "degraded",
@@ -364,9 +367,10 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             found = ct.search_food.execute(center, radius, limit, origin)
         except QuotaExceeded as exc:
             raise ApiError(429, "quota_exhausted", f"places: {exc}") from exc
+        except PlacesUnavailable as exc:
+            raise ApiError(503, "places_unavailable", str(exc)) from exc
         except PlacesError as exc:
-            status = 503 if "not configured" in str(exc) else 502
-            raise ApiError(status, "places_unavailable", str(exc)) from exc
+            raise ApiError(502, "places_unavailable", str(exc)) from exc
         return FoodSearchResponse(
             origin=OriginDTO(lat=lat, lng=lng),
             results=[to_food_dto(h) for h in found.hits],
@@ -384,7 +388,7 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             origin=OriginDTO(lat=lat, lng=lng),
             radius_m=found.radius_m,
             expanded=found.expanded,
-            results=[to_bike_dto(h) for h in found.hits],
+            results=[to_bike_dto(h, GeoPoint(lat, lng)) for h in found.hits],
             unavailable_cities=[city.value for city in found.missing],
         )
 

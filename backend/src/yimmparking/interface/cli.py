@@ -60,7 +60,7 @@ def cmd_refresh_availability(args: argparse.Namespace) -> int:
 def cmd_purge_geocache(_: argparse.Namespace) -> int:
     container = build_container(Settings.from_env())
     try:
-        removed = container.store.purge_expired(container.clock.now())
+        removed = container.store.purge_expired_geocodes(container.clock.now())
         print(f"removed {removed} expired geocode cache entries")
         return 0
     finally:
@@ -150,7 +150,7 @@ def _purge_expired(container: Container) -> None:
     store = container.store
     keep = timedelta(days=container.settings.history_days)
     purges: tuple[tuple[str, Callable[[datetime], int]], ...] = (
-        ("geocode", store.purge_expired),
+        ("geocode", store.purge_expired_geocodes),
         ("food", store.purge_expired_places),
         ("route", store.purge_expired_routes),
         ("history", lambda at: store.purge_history(at, keep)),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bearingDeg, bikeState } from "./bikes";
+import { bikeState } from "./bikes";
 import type { BikeStation } from "./types";
 
 const NOW = new Date("2026-10-14T11:20:00Z");
@@ -15,6 +15,7 @@ function station(over: Partial<BikeStation>): BikeStation {
     rent: 8,
     ret: 20,
     observed_at: "2026-10-14T11:19:00Z",
+    bearing_deg: 0,
     ...over,
   };
 }
@@ -36,15 +37,5 @@ describe("bikeState", () => {
 
   it("does not call a reading old when the feed gave no time", () => {
     expect(bikeState(station({ observed_at: null }), NOW).kind).toBe("known");
-  });
-});
-
-describe("bearingDeg", () => {
-  const origin = { lat: 25.0, lng: 121.5 };
-  it("points the four ways", () => {
-    expect(bearingDeg(origin, { lat: 25.01, lng: 121.5 })).toBeCloseTo(0, 0);
-    expect(bearingDeg(origin, { lat: 25.0, lng: 121.51 })).toBeCloseTo(90, 0);
-    expect(bearingDeg(origin, { lat: 24.99, lng: 121.5 })).toBeCloseTo(180, 0);
-    expect(bearingDeg(origin, { lat: 25.0, lng: 121.49 })).toBeCloseTo(270, 0);
   });
 });

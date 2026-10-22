@@ -37,6 +37,10 @@ class UsageGate:
         self._clock = clock
         self._limits = dict(limits)
 
+    @property
+    def meters(self) -> tuple[str, ...]:
+        return tuple(self._limits)
+
     def limit(self, meter: str) -> int:
         return self._limits[meter]
 

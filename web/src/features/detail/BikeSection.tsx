@@ -1,4 +1,4 @@
-import { bearingDeg, bikeState } from "../../domain/bikes";
+import { bikeState } from "../../domain/bikes";
 import { CITY_LABEL } from "../../domain/cities";
 import { formatDistance } from "../../domain/distance";
 import { directionsUrl, type Coordinate } from "../../domain/maps";
@@ -16,7 +16,7 @@ interface Props {
 const FIRST_RADIUS_M = 400;
 
 /** Two rings (400 m and the widened radius) with each station at its bearing. Direction only. */
-function RingDiagram({ lot, stations, radius }: { lot: Coordinate; stations: BikeStation[]; radius: number }) {
+function RingDiagram({ stations, radius }: { stations: BikeStation[]; radius: number }) {
   const c = 66;
   const outer = 58;
   const inner = (outer * FIRST_RADIUS_M) / radius;
@@ -27,7 +27,7 @@ function RingDiagram({ lot, stations, radius }: { lot: Coordinate; stations: Bik
       <path d="M66 2v8" className="course__north" />
       <path d="M66 58 73 71H59z" className="course__start" />
       {stations.map((s) => {
-        const angle = (bearingDeg(lot, s) * Math.PI) / 180;
+        const angle = (s.bearing_deg * Math.PI) / 180;
         const r = Math.min(outer - 6, (s.distance_m / radius) * outer);
         const x = c + Math.sin(angle) * r;
         const y = c - Math.cos(angle) * r;
@@ -154,7 +154,7 @@ export function BikeSection({ lot, now }: Props) {
       <MissingCities cities={missing} />
       {expanded && (
         <div className="bikes__widened">
-          <RingDiagram lot={lot} stations={results} radius={radius} />
+          <RingDiagram stations={results} radius={radius} />
           <div>
             <p className="bikes__widened-title">
               {t("bikes.expanded", { from: FIRST_RADIUS_M, to: radius })}

@@ -173,6 +173,7 @@ class BikeStationDTO(BaseModel):
     rent: int | None = Field(description="Bikes that can be taken; null = no reading")
     ret: int | None = Field(description="Free docks; null = no reading")
     observed_at: datetime | None = Field(description="When the feed says the reading was taken")
+    bearing_deg: int = Field(ge=0, lt=360, description="Compass bearing from the query point")
 
 
 class BikeSearchResponse(BaseModel):

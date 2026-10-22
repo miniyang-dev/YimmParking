@@ -18,7 +18,7 @@ from yimmparking.application.ports import (
 )
 from yimmparking.domain.brand import BrandClassifier
 from yimmparking.domain.iparking import match_iparking
-from yimmparking.domain.model import Brand, City, IParkingStation, ParkingLot
+from yimmparking.domain.model import Brand, BrandEvidence, City, IParkingStation, ParkingLot
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class RefreshLots:
             for brand in Brand:
                 city_report.brand_counts[brand.value] = sum(1 for lot in lots if lot.brand is brand)
             city_report.brand_by_phone = sum(
-                1 for lot in lots if lot.brand_evidence.value == "phone"
+                1 for lot in lots if lot.brand_evidence is BrandEvidence.PHONE
             )
             city_report.iparking_matched = len(matches)
 
