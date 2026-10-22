@@ -15,9 +15,13 @@ import logging
 import sqlite3
 from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
-from yimmparking.domain.model import AvailabilityBatch
+from yimmparking.domain.model import AvailabilityBatch, City
+
+if TYPE_CHECKING:  # database imports the schema, which imports this module
+    from yimmparking.adapters.store.database import Database
 
 log = logging.getLogger(__name__)
 
@@ -277,3 +281,28 @@ def polls_since(conn: sqlite3.Connection, city: str, since_s: int) -> list[int]:
         (city, since_s),
     ).fetchall()
     return [int(at) for (at,) in rows]
+
+
+class SqliteHistory:
+    """The change-only availability history (AvailabilityHistory), its retention, and the one-off
+    conversion of the old per-poll table."""
+
+    def __init__(self, db: Database) -> None:
+        self._db = db
+
+    def availability_changes(self, lot_id: str, since: datetime) -> list[tuple[int, int | None]]:
+        with self._db.read() as conn:
+            return changes_since(conn, lot_id, to_seconds(since))
+
+    def feed_polls(self, city: City, since: datetime) -> list[int]:
+        with self._db.read() as conn:
+            return polls_since(conn, city.value, to_seconds(since))
+
+    def purge_history(self, now: datetime, keep: timedelta) -> int:
+        with self._db.write() as conn:
+            return purge(conn, now - keep)
+
+    def convert_history(self) -> Conversion:
+        """Convert the old per-poll table into the change-only history (see `history.convert`)."""
+        with self._db.read() as conn:
+            return convert(conn, write=True)

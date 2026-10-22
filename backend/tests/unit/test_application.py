@@ -318,7 +318,7 @@ class TestResolveAddress:
 
     def test_cached_entry_holds_no_address_text(self, store: SqliteStore) -> None:
         ResolveAddress(self.CountingGeocoder(), store, FixedClock(self.now)).execute("市府路1號")
-        row = store._conn.execute("SELECT payload FROM geocode_cache").fetchone()  # noqa: SLF001
+        row = store.db._conn.execute("SELECT payload FROM geocode_cache").fetchone()  # noqa: SLF001
         assert "formatted" not in row["payload"]
         assert "市府路" not in row["payload"]
 

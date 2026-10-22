@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from yimmparking.adapters.store import sqlite as store_module
+from yimmparking.adapters.store import schema
 from yimmparking.adapters.store.sqlite import SqliteStore
 
 # The table each migration created, in the order it shipped. Appending is fine; changing or
@@ -24,7 +24,7 @@ def tables(path: Path) -> set[str]:
 
 
 def test_migration_history_is_pinned() -> None:
-    scripts = store_module._MIGRATIONS
+    scripts = schema.MIGRATIONS
     assert len(scripts) >= len(HISTORY)
     for index, table in enumerate(HISTORY):
         assert f"CREATE TABLE {table} " in scripts[index], (
@@ -36,7 +36,7 @@ def test_migration_history_is_pinned() -> None:
 def test_a_database_left_at_any_earlier_version_upgrades(tmp_path: Path, version: int) -> None:
     db = tmp_path / "old.db"
     conn = sqlite3.connect(db)
-    for script in store_module._MIGRATIONS[:version]:
+    for script in schema.MIGRATIONS[:version]:
         conn.executescript(script)
     conn.execute(f"PRAGMA user_version = {version}")
     conn.commit()
@@ -45,7 +45,7 @@ def test_a_database_left_at_any_earlier_version_upgrades(tmp_path: Path, version
     SqliteStore(db).close()  # must not raise "table ... already exists"
 
     conn = sqlite3.connect(db)
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == len(store_module._MIGRATIONS)
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == len(schema.MIGRATIONS)
     conn.close()
     assert set(HISTORY) <= tables(db)
 
@@ -53,7 +53,7 @@ def test_a_database_left_at_any_earlier_version_upgrades(tmp_path: Path, version
 def test_existing_rows_survive_an_upgrade(tmp_path: Path) -> None:
     db = tmp_path / "old.db"
     conn = sqlite3.connect(db)
-    for script in store_module._MIGRATIONS[:3]:  # the shape a deployed database actually had
+    for script in schema.MIGRATIONS[:3]:  # the shape a deployed database actually had
         conn.executescript(script)
     conn.execute("PRAGMA user_version = 3")
     conn.execute(

@@ -8,8 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from yimmparking.adapters.store import history
-from yimmparking.adapters.store import sqlite as store_module
+from yimmparking.adapters.store import history, schema
 from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.domain.model import AvailabilityBatch, AvailabilityReading, City
 from yimmparking.interface import cli
@@ -25,7 +24,7 @@ def batch(at: datetime, *readings: tuple[str, int | None], city: City = City.TAI
 
 
 def changes(store: SqliteStore, lot_id: str) -> list[tuple[int, int | None]]:
-    conn = store._conn
+    conn = store.db._conn
     return [
         (s - history.to_seconds(T0), c)
         for s, c in conn.execute(
@@ -39,7 +38,7 @@ def changes(store: SqliteStore, lot_id: str) -> list[tuple[int, int | None]]:
 
 
 def polls(store: SqliteStore, city: str = "taipei") -> list[int]:
-    rows = store._conn.execute(
+    rows = store.db._conn.execute(
         "SELECT observed_s FROM availability_poll WHERE city = ? ORDER BY observed_s", (city,)
     )
     return [s - history.to_seconds(T0) for (s,) in rows]
@@ -128,7 +127,7 @@ def old_database(path: Path) -> Path:
     """A database as the previous release left it: version 4, WAL, readings every poll."""
     conn = sqlite3.connect(path)
     conn.execute("PRAGMA journal_mode=WAL")
-    for script in store_module._MIGRATIONS[:4]:
+    for script in schema.MIGRATIONS[:4]:
         conn.executescript(script)
     conn.execute("PRAGMA user_version = 4")
     conn.executemany(
@@ -142,7 +141,7 @@ def old_database(path: Path) -> Path:
 
 def value_at(store: SqliteStore, lot_id: str, iso: str) -> int | None:
     at = history.to_seconds(datetime.fromisoformat(iso))
-    row = store._conn.execute(
+    row = store.db._conn.execute(
         """
         SELECT c.count FROM availability_change c JOIN lot_key k ON k.key = c.lot_key
         WHERE k.lot_id = ? AND c.observed_s <= ? ORDER BY c.observed_s DESC LIMIT 1
@@ -196,27 +195,27 @@ class TestConvert:
     def test_a_disagreement_changes_nothing(self, tmp_path: Path) -> None:
         store = SqliteStore(old_database(tmp_path / "y.db"))
         # A row already in the new table that contradicts the old reading of 10 at 08:02.
-        store._conn.execute("INSERT INTO lot_key (key, lot_id) VALUES (1, 'taipei:a')")
-        store._conn.execute(
+        store.db._conn.execute("INSERT INTO lot_key (key, lot_id) VALUES (1, 'taipei:a')")
+        store.db._conn.execute(
             "INSERT INTO availability_change VALUES (1, ?, 99)",
             (history.to_seconds(datetime.fromisoformat("2026-10-20T08:02:00+00:00")),),
         )
-        store._conn.commit()
+        store.db._conn.commit()
 
         with pytest.raises(history.ConversionMismatch):
             store.convert_history()
 
-        assert store._conn.execute("SELECT COUNT(*) FROM availability_change").fetchone()[0] == 1
+        assert store.db._conn.execute("SELECT COUNT(*) FROM availability_change").fetchone()[0] == 1
         store.close()
         assert has_old_table(tmp_path / "y.db")
 
     def test_live_writes_after_the_old_data_are_kept(self, tmp_path: Path) -> None:
         store = SqliteStore(old_database(tmp_path / "y.db"))
-        store._conn.execute(
+        store.db._conn.execute(
             "INSERT INTO availability_latest VALUES ('taipei:a', 'taipei', 7, ?)",
             ("2026-10-20T08:10:00+00:00",),
         )
-        store._conn.commit()
+        store.db._conn.commit()
         store.record_availability(batch(T0 + 12 * MIN, ("taipei:a", 4)))
 
         store.convert_history()
