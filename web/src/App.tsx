@@ -223,7 +223,7 @@ export function App() {
                 onOpen={(lot) => setRoute({ lot: lot.id })}
               />
             )}
-            <CurbSection origin={{ lat: data.origin.lat, lng: data.origin.lng }} />
+            <CurbSection origin={{ lat: data.origin.lat, lng: data.origin.lng }} now={now} />
           </>
         ) : (
           <section className="empty">

@@ -43,7 +43,7 @@ function CurbCountCell({ segment }: { segment: CurbSegment }) {
  * Metered street segments near the search origin, below the lot list. Hidden entirely while the
  * server has no TDX credentials: an unconfigured source is not something a driver can act on.
  */
-export function CurbSection({ origin }: { origin: Coordinate }) {
+export function CurbSection({ origin, now }: { origin: Coordinate; now: Date }) {
   const { t } = useI18n();
   const query = useCurb(origin.lat, origin.lng);
 
@@ -92,7 +92,7 @@ export function CurbSection({ origin }: { origin: Coordinate }) {
           <table className="lots lots--curb">
             <tbody>
               {results.map((segment, i) => {
-                const notes = curbNotes(segment);
+                const notes = curbNotes(segment, now);
                 return (
                   <tr key={segment.id} className="lots__row">
                     <td className="lots__no">{String.fromCharCode(97 + (i % 26))}</td>
@@ -109,9 +109,9 @@ export function CurbSection({ origin }: { origin: Coordinate }) {
                       <div className="lots__meta">
                         <span>{t("walk.straight", { d: formatDistance(segment.distance_m) })}</span>
                         {segment.description && <span>{segment.description}</span>}
-                        {notes.map((key) => (
-                          <span key={key} className="lots__hours">
-                            {t(key)}
+                        {notes.map((note) => (
+                          <span key={note.key} className="lots__hours">
+                            {t(note.key, note.vars)}
                           </span>
                         ))}
                       </div>

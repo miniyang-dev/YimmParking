@@ -91,8 +91,7 @@ class TdxClient:
             raise SourceError(f"TDX token unavailable: {exc}") from exc
 
     def get_items(self, path: str) -> list[dict[str, Any]]:
-        """Every row of a TDX list endpoint, paged. Accepts both the `{"Items": [...]}` wrapper
-        and a bare array, as TDX endpoints differ."""
+        """Every row of a TDX list endpoint, paged (see `_rows` for the shapes accepted)."""
         url = f"{self._api_base}/{path.lstrip('/')}"
         rows: list[dict[str, Any]] = []
         for page in range(MAX_PAGES):
@@ -120,10 +119,26 @@ class TdxClient:
                 raise SourceError(f"{path}: HTTP {exc.response.status_code}") from exc
             except (httpx.HTTPError, ValueError) as exc:
                 raise SourceError(f"{path}: {exc}") from exc
-            chunk = body.get("Items") if isinstance(body, dict) else body
-            if not isinstance(chunk, list):
+            chunk = _rows(body)
+            if chunk is None:
                 raise SourceError(f"{path}: unexpected body")
             rows.extend(row for row in chunk if isinstance(row, dict))
             if len(chunk) < PAGE_SIZE:
                 return rows
         raise SourceError(f"{path}: more than {MAX_PAGES} pages, refusing to continue")
+
+
+def _rows(body: Any) -> list[Any] | None:
+    """The rows of a TDX answer: a bare array, or the one list inside its wrapper object.
+
+    The OpenAPI document names the list `Items`, but the live service names it per endpoint
+    (`ParkingSegments` for segments, for one), so the wrapper's only list is taken.
+    """
+    if isinstance(body, list):
+        return body
+    if not isinstance(body, dict):
+        return None
+    if isinstance(body.get("Items"), list):
+        return list(body["Items"])
+    lists = [value for value in body.values() if isinstance(value, list)]
+    return lists[0] if len(lists) == 1 else None

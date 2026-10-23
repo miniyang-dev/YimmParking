@@ -134,8 +134,13 @@ the endpoint answers 503 and the client hides the section.
   retried after 2 minutes, and served from the last copy meanwhile (up to 30 minutes for counts).
 - Counts: the car-space reading (`SpaceType` 1) when given, else the all-types total, labelled as such.
   `-1` is "unknown", never zero. Distance is straight-line to the segment's marker point.
-- The parsing was written from TDX's OpenAPI document; `tests/fixtures/tdx_curb_*.json` are built
-  from that schema, not recorded. Replace them with recorded responses once a key is in use.
+- Checked against the live service (2026-10-23): the list is named per endpoint
+  (`ParkingSegments`, `CurbParkingSegmentAvailabilities`), not `Items` as the OpenAPI document says;
+  `FullStatus` can be `-1` (unknown). Taipei has ~2,400 segments refreshed every 5 minutes, New Taipei
+  ~600 running 15–20 minutes behind (the age is shown past 15 minutes). Segments with only scooter
+  spaces (no car type in the breakdown) are not listed. `tests/fixtures/tdx_curb_*.json` are recorded.
+- Rate limit: 5 calls a minute per key (`x-ratelimit-limit-minute`). A search reads at most four
+  (segments and counts for two cities) and then serves from memory; a 429 is retried after 2 minutes.
 
 ## Data caveats
 

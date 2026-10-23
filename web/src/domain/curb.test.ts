@@ -32,20 +32,26 @@ describe("curbCell", () => {
   });
 });
 
+const NOW = new Date("2026-10-23T05:00:00Z");
+
 describe("curbNotes", () => {
   it("says nothing when all is ordinary", () => {
-    expect(curbNotes(seg({}))).toEqual([]);
+    expect(curbNotes(seg({}), NOW)).toEqual([]);
   });
 
   it("names the operator's state and an all-types count", () => {
-    expect(curbNotes(seg({ fullness: "almost_full", service: "outside_hours", space_kind: "all" }))).toEqual([
-      "curb.almostFull",
-      "curb.outsideHours",
-      "curb.allTypes",
-    ]);
+    const notes = curbNotes(seg({ fullness: "almost_full", service: "outside_hours", space_kind: "all" }), NOW);
+    expect(notes.map((n) => n.key)).toEqual(["curb.almostFull", "curb.outsideHours", "curb.allTypes"]);
   });
 
   it("does not warn about an all-types count when there is no count", () => {
-    expect(curbNotes(seg({ space_kind: "all", available: null }))).toEqual([]);
+    expect(curbNotes(seg({ space_kind: "all", available: null }), NOW)).toEqual([]);
+  });
+
+  it("says how old a count is once it is over 15 minutes", () => {
+    expect(curbNotes(seg({ observed_at: "2026-10-23T04:50:00Z" }), NOW)).toEqual([]);
+    expect(curbNotes(seg({ observed_at: "2026-10-23T04:42:00Z" }), NOW)).toEqual([
+      { key: "curb.age", vars: { min: 18 } },
+    ]);
   });
 });

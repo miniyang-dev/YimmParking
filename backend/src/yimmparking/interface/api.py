@@ -27,6 +27,7 @@ from yimmparking.application.ports import (
 from yimmparking.application.search import FoodHit, ParkingHit
 from yimmparking.application.search_bikes import BikeHit
 from yimmparking.application.search_curb import CurbHit
+from yimmparking.domain.curb import SpaceKind
 from yimmparking.domain.fee import hourly_car_rate
 from yimmparking.domain.food_category import category_of
 from yimmparking.domain.geo import GeoPoint, initial_bearing_deg
@@ -198,7 +199,8 @@ def to_curb_dto(hit: CurbHit) -> CurbSegmentDTO:
         distance_m=round(hit.distance_m),
         total=r.total if r else None,
         available=r.available if r else None,
-        space_kind=r.kind.value if r else "all",
+        # Scooter-only segments never get here (the search drops them): it is car or all.
+        space_kind="car" if r and r.kind is SpaceKind.CAR else "all",
         fullness=r.fullness.value if r else "unknown",
         service=r.service.value if r else "unknown",
         observed_at=r.observed_at if r else None,

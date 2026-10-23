@@ -99,7 +99,11 @@ def parse_availability(row: dict[str, Any], city: City) -> CurbReading | None:
         if isinstance(a, dict)
     }
     # The car-space reading is what a driver needs; an all-types total may count scooters too.
-    if SPACE_CAR in by_type:
+    # A segment broken down into types without a car type has no car spaces at all (Taipei marks
+    # scooter-only segments this way, e.g. "太原路B(含機車)" with only SpaceType 2).
+    if by_type and SPACE_CAR not in by_type and SPACE_ALL not in by_type:
+        total, available, kind = None, None, SpaceKind.NO_CAR
+    elif SPACE_CAR in by_type:
         car = by_type[SPACE_CAR]
         total, available, kind = (
             _count(car.get("NumberOfSpaces")),

@@ -1,8 +1,8 @@
 """On-street parking from TDX: token handling, paging, parsing, and the nearby search.
 
-The fixtures follow the field names of TDX's Parking OpenAPI document (OnStreet group); they are
-hand-built from that schema, not recorded. Replace them with recorded responses once a key is
-available, and re-run these tests against them.
+The fixtures are real TDX answers recorded on 2026-10-23 (wrapper kept, a few telling rows picked):
+note the list is named per endpoint (`ParkingSegments`, `CurbParkingSegmentAvailabilities`), not
+`Items` as the OpenAPI document says.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from yimmparking.adapters.tdx.client import PAGE_SIZE, TdxClient
+from yimmparking.adapters.tdx.client import PAGE_SIZE, TdxClient, _rows
 from yimmparking.adapters.tdx.curb import TdxCurbFeed, parse_availability, parse_segment
 from yimmparking.application.ports import CurbUnconfigured, SourceError
 from yimmparking.application.search_curb import LIVE_TTL, SearchNearbyCurb
@@ -33,6 +33,12 @@ from yimmparking.domain.model import City
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 SEGMENTS = json.loads((FIXTURES / "tdx_curb_segments.json").read_text(encoding="utf-8"))
 LIVE = json.loads((FIXTURES / "tdx_curb_availability.json").read_text(encoding="utf-8"))
+LIVE_NTPC = json.loads(
+    (FIXTURES / "tdx_curb_availability_newtaipei.json").read_text(encoding="utf-8")
+)
+SEGMENT_ROWS = SEGMENTS["ParkingSegments"]
+LIVE_ROWS = LIVE["CurbParkingSegmentAvailabilities"]
+LIVE_NTPC_ROWS = LIVE_NTPC["CurbParkingSegmentAvailabilities"]
 TOKEN_URL = "https://tdx.example/token"
 API = "https://tdx.example/api"
 
@@ -66,7 +72,8 @@ class Tdx:
             skip = int(request.url.params["$skip"])
             pages = self.pages[path]
             index = skip // PAGE_SIZE
-            return httpx.Response(200, json={"Items": pages[index] if index < len(pages) else []})
+            rows = pages[index] if index < len(pages) else []
+            return httpx.Response(200, json={"ParkingSegments": rows})
         return httpx.Response(200, json=SEGMENTS)
 
 
@@ -119,7 +126,7 @@ class TestClient:
     def test_every_page_is_read(self) -> None:
         tdx = Tdx()
         path = "/api/v1/Parking/OnStreet/ParkingSegment/City/Taipei"
-        row = SEGMENTS["Items"][0]
+        row = SEGMENT_ROWS[0]
         tdx.pages[path] = [[row] * PAGE_SIZE, [row] * 3]
         rows = client(tdx).get_items("v1/Parking/OnStreet/ParkingSegment/City/Taipei")
         assert len(rows) == PAGE_SIZE + 3
@@ -139,37 +146,62 @@ class TestClient:
 
 class TestParsing:
     def test_segment_name_position_and_fare(self) -> None:
-        segment = parse_segment(SEGMENTS["Items"][0], City.TAIPEI)
+        segment = parse_segment(SEGMENT_ROWS[0], City.TAIPEI)
         assert segment == CurbSegment(
-            id="taipei:00105",
+            id="taipei:3060034",
             city=City.TAIPEI,
-            name="松高路(松智路至松仁路)",
-            location=GeoPoint(25.0392, 121.567),
-            description="南側",
-            fare="小型車每小時30元，08:00-20:00收費",
-            town="信義區",
+            name="辛亥路1段34巷",
+            location=GeoPoint(25.01988, 121.52993),
+            description="辛亥路1段34巷(辛亥路一段到羅斯福路三段269巷)",
+            fare="20元(09:00-17:00)",
+            town="",  # TDX gives no TownName for Taipei
         )
 
     def test_a_segment_without_a_position_is_dropped(self) -> None:
-        assert parse_segment(SEGMENTS["Items"][1], City.TAIPEI) is None
+        row = {k: v for k, v in SEGMENT_ROWS[0].items() if k != "ParkingSegmentPosition"}
+        assert parse_segment(row, City.TAIPEI) is None
 
-    def test_the_car_space_reading_is_preferred_over_the_all_types_total(self) -> None:
-        reading = parse_availability(LIVE["Items"][0], City.TAIPEI)
+    def test_a_car_segment_with_free_spaces(self) -> None:
+        reading = parse_availability(LIVE_ROWS[0], City.TAIPEI)
         assert reading is not None
-        assert (reading.total, reading.available, reading.kind) == (20, 4, SpaceKind.CAR)
-        assert reading.fullness is CurbFullness.ALMOST_FULL
+        assert (reading.total, reading.available, reading.kind) == (9, 4, SpaceKind.CAR)
+        assert reading.fullness is CurbFullness.AVAILABLE
         assert reading.service is CurbService.OPEN
-        assert reading.observed_at == datetime(2026, 10, 22, 3, 29, tzinfo=UTC)
+        assert reading.observed_at == datetime(2026, 10, 23, 5, 0, tzinfo=UTC)
+
+    def test_a_full_segment(self) -> None:
+        reading = parse_availability(LIVE_ROWS[1], City.TAIPEI)
+        assert reading is not None
+        assert (reading.available, reading.fullness) == (0, CurbFullness.FULL)
 
     def test_minus_one_is_unknown_never_zero(self) -> None:
-        reading = parse_availability(LIVE["Items"][1], City.TAIPEI)
+        # Real rows carry -1 in the count and in FullStatus (a value the document does not list).
+        reading = parse_availability(LIVE_ROWS[2], City.TAIPEI)
         assert reading is not None
-        assert (reading.total, reading.available, reading.kind) == (15, None, SpaceKind.ALL)
-        assert reading.service is CurbService.OUTSIDE_HOURS
-        assert reading.fullness is CurbFullness.AVAILABLE
+        assert (reading.total, reading.available, reading.kind) == (2, None, SpaceKind.CAR)
+        assert reading.fullness is CurbFullness.UNKNOWN
+
+    def test_a_scooter_only_segment_is_no_place_for_a_car(self) -> None:
+        reading = parse_availability(LIVE_ROWS[3], City.TAIPEI)  # "太原路B(含機車)": type 2 only
+        assert reading is not None
+        assert (reading.total, reading.available, reading.kind) == (None, None, SpaceKind.NO_CAR)
+
+    def test_new_taipei_counts_cars_apart_from_other_space_types(self) -> None:
+        # 40 car spaces all taken; the row's own total (7 free) counts other types too.
+        mixed = parse_availability(LIVE_NTPC_ROWS[0], City.NEW_TAIPEI)
+        assert mixed is not None
+        assert (mixed.total, mixed.available, mixed.kind) == (40, 0, SpaceKind.CAR)
+        scooters = parse_availability(LIVE_NTPC_ROWS[1], City.NEW_TAIPEI)
+        assert scooters is not None and scooters.kind is SpaceKind.NO_CAR
+
+    def test_without_a_breakdown_the_all_types_total_is_used_and_said(self) -> None:
+        row = {**LIVE_ROWS[0], "Availabilities": [], "TotalSpaces": 15, "AvailableSpaces": 6}
+        reading = parse_availability(row, City.TAIPEI)
+        assert reading is not None
+        assert (reading.total, reading.available, reading.kind) == (15, 6, SpaceKind.ALL)
 
     def test_unexpected_status_codes_are_unknown(self) -> None:
-        row = {**LIVE["Items"][0], "FullStatus": 9, "ServiceStatus": None}
+        row = {**LIVE_ROWS[0], "FullStatus": 9, "ServiceStatus": None}
         reading = parse_availability(row, City.TAIPEI)
         assert reading is not None
         assert reading.fullness is CurbFullness.UNKNOWN
@@ -298,3 +330,31 @@ def test_segments_that_failed_are_tried_again_after_minutes_not_a_day() -> None:
     feed.segments = [segment("a", 100)]
     clock.at += timedelta(minutes=3)
     assert [h.segment.name for h in search.execute(ORIGIN).hits] == ["a"]
+
+
+def test_scooter_only_segments_are_not_listed() -> None:
+    no_car = CurbReading(
+        "taipei:s", None, None, SpaceKind.NO_CAR, CurbFullness.AVAILABLE, CurbService.OPEN, None
+    )
+    feed = Feed([segment("s", 50), segment("a", 100)], {"taipei:s": no_car})
+    found = SearchNearbyCurb([feed], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+    assert [h.segment.name for h in found.hits] == ["a"]
+
+
+@pytest.mark.parametrize(
+    ("body", "rows"),
+    [
+        ([{"a": 1}], 1),
+        ({"Items": [{"a": 1}, {"b": 2}]}, 2),
+        ({"UpdateTime": "x", "ParkingSegments": [{"a": 1}]}, 1),
+        ({"UpdateTime": "x", "CurbParkingSegmentAvailabilities": []}, 0),
+    ],
+)
+def test_rows_are_found_under_any_wrapper_name(body: object, rows: int) -> None:
+    found = _rows(body)
+    assert found is not None and len(found) == rows
+
+
+def test_a_wrapper_with_no_single_list_is_refused() -> None:
+    assert _rows({"a": [], "b": []}) is None
+    assert _rows("nope") is None

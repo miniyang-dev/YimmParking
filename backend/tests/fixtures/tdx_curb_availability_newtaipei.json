@@ -1,0 +1,52 @@
+{
+ "UpdateTime": "2026-10-23T13:01:59+08:00",
+ "UpdateInterval": -1,
+ "SrcUpdateTime": "2026-10-23T12:41:50+08:00",
+ "SrcUpdateInterval": 300,
+ "AuthorityCode": "NWT",
+ "CurbParkingSegmentAvailabilities": [
+  {
+   "ParkingSegmentID": "N34",
+   "ParkingSegmentName": {
+    "Zh_tw": "八里區八里左岸自行車道旁停車場"
+   },
+   "TotalSpaces": 41,
+   "AvailableSpaces": 7,
+   "Availabilities": [
+    {
+     "SpaceType": 1,
+     "NumberOfSpaces": 40,
+     "AvailableSpaces": 0
+    },
+    {
+     "SpaceType": 9,
+     "NumberOfSpaces": 1,
+     "AvailableSpaces": 0
+    }
+   ],
+   "ServiceStatus": 1,
+   "FullStatus": 1,
+   "ChargeStatus": 1,
+   "DataCollectTime": "2026-10-23T12:41:50+08:00"
+  },
+  {
+   "ParkingSegmentID": "N49",
+   "ParkingSegmentName": {
+    "Zh_tw": "八里區觀海大道"
+   },
+   "TotalSpaces": 4,
+   "AvailableSpaces": 2,
+   "Availabilities": [
+    {
+     "SpaceType": 2,
+     "NumberOfSpaces": 4,
+     "AvailableSpaces": 0
+    }
+   ],
+   "ServiceStatus": 1,
+   "FullStatus": 1,
+   "ChargeStatus": 1,
+   "DataCollectTime": "2026-10-23T12:41:51+08:00"
+  }
+ ]
+}

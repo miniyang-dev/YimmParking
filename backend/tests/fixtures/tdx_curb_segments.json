@@ -1,36 +1,70 @@
 {
-  "UpdateTime": "2026-10-22T11:00:00+08:00",
-  "UpdateInterval": 86400,
-  "SrcUpdateTime": "2026-10-22T03:00:00+08:00",
-  "SrcUpdateInterval": 86400,
-  "AuthorityCode": "TPE",
-  "VersionID": 1,
-  "Items": [
-    {
-      "ParkingSegmentID": "00105",
-      "ParkingSegmentName": { "Zh_tw": "松高路(松智路至松仁路)", "En": "Songgao Rd." },
-      "RoadSection": { "Start": "松智路", "End": "松仁路" },
-      "ParkingSegmentPosition": { "PositionLat": 25.03920, "PositionLon": 121.56700 },
-      "Geometry": "LINESTRING(121.5665 25.0392,121.5675 25.0392)",
-      "Description": "南側",
-      "FareDescription": "小型車每小時30元，08:00-20:00收費",
-      "HasChargingPoint": 0,
-      "City": "Taipei",
-      "CityCode": "TPE",
-      "TownName": "信義區",
-      "TownID": "6300200"
-    },
-    {
-      "ParkingSegmentID": "00777",
-      "ParkingSegmentName": { "Zh_tw": "沒座標路段", "En": null },
-      "Description": "",
-      "FareDescription": "",
-      "HasChargingPoint": 0,
-      "City": "Taipei",
-      "CityCode": "TPE",
-      "TownName": "信義區",
-      "TownID": "6300200"
-    }
-  ],
-  "Count": 2
+ "UpdateTime": "2026-10-23T11:39:14+08:00",
+ "UpdateInterval": 14400,
+ "SrcUpdateTime": "2026-08-20T00:00:00+08:00",
+ "SrcUpdateInterval": 86400,
+ "AuthorityCode": "TPE",
+ "VersionID": 3970,
+ "ParkingSegments": [
+  {
+   "ParkingSegmentID": "3060034",
+   "ParkingSegmentName": {
+    "Zh_tw": "辛亥路1段34巷"
+   },
+   "RoadSection": {
+    "Start": "辛亥路一段",
+    "End": "羅斯福路三段269巷"
+   },
+   "ParkingSegmentPosition": {
+    "PositionLat": 25.01988,
+    "PositionLon": 121.52993
+   },
+   "Geometry": "POLYGON ((121.52993 25.01988,121.53001 25.01994,121.53030 25.01965,121.53023 25.01960,121.52993 25.01988))",
+   "Description": "辛亥路1段34巷(辛亥路一段到羅斯福路三段269巷)",
+   "FareDescription": "20元(09:00-17:00)",
+   "HasChargingPoint": 0,
+   "City": "Taipei",
+   "CityCode": "TPE"
+  },
+  {
+   "ParkingSegmentID": "2062113",
+   "ParkingSegmentName": {
+    "Zh_tw": "民生東路3段113巷"
+   },
+   "RoadSection": {
+    "Start": "民生東路3段",
+    "End": "復興北路361巷"
+   },
+   "ParkingSegmentPosition": {
+    "PositionLat": 25.05888,
+    "PositionLon": 121.54613
+   },
+   "Geometry": "POLYGON ((121.54613 25.05888,121.54613 25.05913,121.54613 25.05931,121.54614 25.05989,121.54616 25.05999,121.54630 25.06013,121.54652 25.06036,121.54650 25.06040,121.54666 25.06036,121.54662 25.06036,121.54626 25.05997,121.54622 25.05984,121.54621 25.05940,121.54621 25.05902,121.54620 25.05890,121.54620 25.05856,121.54620 25.05839,121.54619 25.05792,121.54621 25.05789,121.54609 25.05790,121.54611 25.05791,121.54612 25.05834,121.54612 25.05854,121.54613 25.05888))",
+   "Description": "民生東路3段113巷(民生東路3段到復興北路361巷)",
+   "FareDescription": "30元(09:00-17:00)",
+   "HasChargingPoint": 0,
+   "City": "Taipei",
+   "CityCode": "TPE"
+  },
+  {
+   "ParkingSegmentID": "5226358",
+   "ParkingSegmentName": {
+    "Zh_tw": "新湖一路358巷"
+   },
+   "RoadSection": {
+    "Start": "新湖一路",
+    "End": "新湖三路"
+   },
+   "ParkingSegmentPosition": {
+    "PositionLat": 25.06253,
+    "PositionLon": 121.58293
+   },
+   "Geometry": "POLYGON ((121.58293 25.06253,121.58286 25.06249,121.58176 25.06393,121.58117 25.06475,121.58066 25.06547,121.58076 25.06551,121.58085 25.06555,121.58137 25.06484,121.58193 25.06404,121.58246 25.06334,121.58303 25.06260,121.58293 25.06253))",
+   "Description": "新湖一路358巷(新湖一路到新湖三路)",
+   "FareDescription": "20元(09:00-17:00)",
+   "HasChargingPoint": 0,
+   "City": "Taipei",
+   "CityCode": "TPE"
+  }
+ ]
 }

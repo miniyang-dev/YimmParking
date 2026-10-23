@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from typing import Generic, TypeVar
 
 from yimmparking.application.ports import Clock, CurbFeed, CurbUnconfigured, SourceError
-from yimmparking.domain.curb import CurbReading, CurbSegment
+from yimmparking.domain.curb import CurbReading, CurbSegment, SpaceKind
 from yimmparking.domain.geo import GeoPoint, haversine_m
 from yimmparking.domain.model import City
 
@@ -74,6 +74,11 @@ class _Cached(Generic[T]):
         return self._value[1]
 
 
+def _no_car(reading: CurbReading | None) -> bool:
+    """A segment with only scooter (or other) spaces is not listed for a driver."""
+    return reading is not None and reading.kind is SpaceKind.NO_CAR
+
+
 class SearchNearbyCurb:
     def __init__(self, feeds: list[CurbFeed], clock: Clock, *, configured: bool = True) -> None:
         self._feeds, self._clock, self._configured = feeds, clock, configured
@@ -104,7 +109,9 @@ class SearchNearbyCurb:
                     missing.append(feed.city)
                     live = {}
                 scored.extend(
-                    CurbHit(s, live.get(s.id), haversine_m(center, s.location)) for s in segments
+                    CurbHit(s, live.get(s.id), haversine_m(center, s.location))
+                    for s in segments
+                    if not _no_car(live.get(s.id))
                 )
         if self._feeds and len(missing) == len(self._feeds) and not scored:
             raise SourceError(f"no on-street parking feed is readable: {', '.join(missing)}")

@@ -37,6 +37,7 @@ class CurbService(StrEnum):
 class SpaceKind(StrEnum):
     CAR = "car"  # counted from the car-space reading
     ALL = "all"  # only an all-types total was given: it may include scooter spaces
+    NO_CAR = "no_car"  # only other space types (scooters, …): not a place to park a car
 
 
 @dataclass(frozen=True, slots=True)
