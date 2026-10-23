@@ -48,6 +48,13 @@ describe("curbNotes", () => {
     expect(curbNotes(seg({ space_kind: "all", available: null }), NOW)).toEqual([]);
   });
 
+  it("does not call a segment almost full when its car count is already zero", () => {
+    expect(curbNotes(seg({ available: 0, fullness: "almost_full" }), NOW)).toEqual([]);
+    expect(curbNotes(seg({ available: 3, fullness: "almost_full" }), NOW)).toEqual([
+      { key: "curb.almostFull" },
+    ]);
+  });
+
   it("says how old a count is once it is over 15 minutes", () => {
     expect(curbNotes(seg({ observed_at: "2026-10-23T04:50:00Z" }), NOW)).toEqual([]);
     expect(curbNotes(seg({ observed_at: "2026-10-23T04:42:00Z" }), NOW)).toEqual([

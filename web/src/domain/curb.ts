@@ -17,7 +17,10 @@ export const CURB_OLD_AFTER_MIN = 15;
 /** Short notes beside the count, in reading order. Nothing is said when all is ordinary. */
 export function curbNotes(segment: CurbSegment, now: Date): Phrase[] {
   const notes: Phrase[] = [];
-  if (segment.fullness === "almost_full") notes.push({ key: "curb.almostFull" });
+  // "Almost full" is the operator's view of the whole segment; once the car count is zero the cell
+  // already says full, and saying both would contradict.
+  const full = curbCell(segment).kind === "full";
+  if (segment.fullness === "almost_full" && !full) notes.push({ key: "curb.almostFull" });
   if (segment.fullness === "overcrowded") notes.push({ key: "curb.overcrowded" });
   if (segment.service === "outside_hours") notes.push({ key: "curb.outsideHours" });
   if (segment.service === "resting") notes.push({ key: "curb.resting" });

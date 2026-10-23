@@ -108,7 +108,9 @@ export function CurbSection({ origin, now }: { origin: Coordinate; now: Date }) 
                       </a>
                       <div className="lots__meta">
                         <span>{t("walk.straight", { d: formatDistance(segment.distance_m) })}</span>
-                        {segment.description && <span>{segment.description}</span>}
+                        {segment.description && segment.description !== segment.name && (
+                          <span>{segment.description}</span>
+                        )}
                         {notes.map((note) => (
                           <span key={note.key} className="lots__hours">
                             {t(note.key, note.vars)}
