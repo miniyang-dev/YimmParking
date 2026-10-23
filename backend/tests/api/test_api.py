@@ -556,7 +556,7 @@ def test_curb_nearby_lists_segments_with_counts() -> None:
                 CurbSegment("taipei:1", City.TAIPEI, "松高路", GeoPoint(CENTER.lat + 0.001, CENTER.lng))
             ]
 
-        def fetch_availability(self) -> dict[str, CurbReading]:
+        def fetch_availability(self, segment_ids: list[str]) -> dict[str, CurbReading]:
             return {
                 "taipei:1": CurbReading(
                     "taipei:1", 20, 0, SpaceKind.CAR, CurbFullness.FULL, CurbService.OPEN, NOW

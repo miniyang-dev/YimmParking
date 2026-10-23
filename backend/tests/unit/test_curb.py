@@ -19,7 +19,7 @@ import pytest
 from yimmparking.adapters.tdx.client import PAGE_SIZE, TdxClient, _rows
 from yimmparking.adapters.tdx.curb import TdxCurbFeed, parse_availability, parse_segment
 from yimmparking.application.ports import CurbUnconfigured, SourceError
-from yimmparking.application.search_curb import LIVE_TTL, SearchNearbyCurb
+from yimmparking.application.search_curb import LIVE_TTL, MAX_STALE, SearchNearbyCurb
 from yimmparking.domain.curb import (
     CurbFullness,
     CurbReading,
@@ -106,12 +106,12 @@ class TestClient:
         tdx, clock = Tdx(expires_in=3600), Clock()
         feed = TdxCurbFeed(client(tdx, clock), City.TAIPEI)
         feed.fetch_segments()
-        feed.fetch_availability()
+        feed.fetch_availability(["taipei:1002053"])
         assert tdx.tokens == 1
         assert tdx.data[0].headers["authorization"] == "Bearer tok1"
 
         clock.mono += 3600 - 300  # inside the renewal margin
-        feed.fetch_availability()
+        feed.fetch_availability(["taipei:1002053"])
         assert tdx.tokens == 2
         assert tdx.data[-1].headers["authorization"] == "Bearer tok2"
 
@@ -131,6 +131,24 @@ class TestClient:
         rows = client(tdx).get_items("v1/Parking/OnStreet/ParkingSegment/City/Taipei")
         assert len(rows) == PAGE_SIZE + 3
         assert [r.url.params["$skip"] for r in tdx.data] == ["0", str(PAGE_SIZE)]
+
+    def test_live_counts_are_asked_for_the_named_segments_of_this_city_only(self) -> None:
+        tdx = Tdx()
+        readings = TdxCurbFeed(client(tdx), City.TAIPEI).fetch_availability(
+            ["taipei:1002053", "taipei:1003059", "new_taipei:N34", "taipei:O'1"]
+        )
+        [request] = tdx.data
+        assert request.url.path.endswith("/ParkingSegmentAvailability/City/Taipei")
+        assert request.url.params["$filter"] == (
+            "ParkingSegmentID eq '1002053' or ParkingSegmentID eq '1003059'"
+            " or ParkingSegmentID eq 'O''1'"
+        )
+        assert "taipei:1002053" in readings  # parsed as before, keyed by our id
+
+    def test_no_segments_of_this_city_means_no_call(self) -> None:
+        tdx = Tdx()
+        assert TdxCurbFeed(client(tdx), City.TAIPEI).fetch_availability(["new_taipei:N34"]) == {}
+        assert tdx.data == [] and tdx.tokens == 0
 
     def test_without_credentials_nothing_is_sent(self) -> None:
         tdx = Tdx()
@@ -243,6 +261,7 @@ class Feed:
     ) -> None:
         self.city, self.segments, self.live = city, segments, live
         self.segment_calls = self.live_calls = 0
+        self.asked: list[list[str]] = []
 
     def fetch_segments(self) -> list[CurbSegment]:
         self.segment_calls += 1
@@ -250,11 +269,12 @@ class Feed:
             raise self.segments
         return self.segments
 
-    def fetch_availability(self) -> dict[str, CurbReading]:
+    def fetch_availability(self, segment_ids: list[str]) -> dict[str, CurbReading]:
         self.live_calls += 1
+        self.asked.append(list(segment_ids))
         if isinstance(self.live, Exception):
             raise self.live
-        return self.live
+        return {i: r for i, r in self.live.items() if i in segment_ids}
 
 
 class TestSearch:
@@ -274,7 +294,7 @@ class TestSearch:
         found = SearchNearbyCurb([feed], Clock()).execute(ORIGIN)  # type: ignore[list-item]
         assert (found.radius_m, found.expanded, len(found.hits)) == (600, True, 1)
 
-    def test_segments_are_read_daily_and_counts_every_two_minutes(self) -> None:
+    def test_segments_are_read_daily_and_counts_every_five_minutes(self) -> None:
         feed, clock = Feed([segment("a", 100)], {}), Clock()
         search = SearchNearbyCurb([feed], clock)  # type: ignore[list-item]
         search.execute(ORIGIN)
@@ -286,6 +306,40 @@ class TestSearch:
         clock.at += timedelta(hours=24)
         search.execute(ORIGIN)
         assert feed.segment_calls == 2
+
+    def test_counts_are_asked_only_for_segments_near_the_search(self) -> None:
+        feed = Feed([segment("far", 700), segment("b", 250), segment("a", 100)], {})
+        SearchNearbyCurb([feed], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+        assert feed.asked == [["taipei:a", "taipei:b"]]  # nearest first; 700 m is past 600 m
+
+    def test_a_city_with_nothing_nearby_is_not_asked(self) -> None:
+        taipei = Feed([segment("a", 100)], {})
+        new_taipei = Feed([segment("n", 5000, City.NEW_TAIPEI)], {}, City.NEW_TAIPEI)
+        found = SearchNearbyCurb([taipei, new_taipei], Clock()).execute(ORIGIN)  # type: ignore[list-item]
+        assert (taipei.live_calls, new_taipei.live_calls) == (1, 0)
+        assert found.missing == ()
+
+    def test_a_search_elsewhere_asks_again_but_a_repeat_does_not(self) -> None:
+        feed, clock = Feed([segment("a", 100), segment("z", 3000)], {}), Clock()
+        search = SearchNearbyCurb([feed], clock)  # type: ignore[list-item]
+        search.execute(ORIGIN)
+        search.execute(ORIGIN)
+        assert feed.live_calls == 1
+        elsewhere = GeoPoint(ORIGIN.lat + 3000 / 111_195, ORIGIN.lng)
+        search.execute(elsewhere)
+        assert feed.asked[-1] == ["taipei:z"] and feed.live_calls == 2
+
+    def test_a_failed_refresh_serves_the_last_counts_for_a_while(self) -> None:
+        feed, clock = Feed([segment("a", 100)], {"taipei:a": reading("a", 3)}), Clock()
+        search = SearchNearbyCurb([feed], clock)  # type: ignore[list-item]
+        search.execute(ORIGIN)
+        feed.live = SourceError("down")
+        clock.at += LIVE_TTL
+        found = search.execute(ORIGIN)
+        assert found.hits[0].reading is not None and found.missing == ()
+        clock.at += MAX_STALE
+        found = search.execute(ORIGIN)
+        assert found.hits[0].reading is None and found.missing == (City.TAIPEI,)
 
     def test_one_city_down_leaves_the_other_and_says_so(self) -> None:
         taipei = Feed([segment("a", 100)], {})

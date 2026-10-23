@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import httpx
@@ -92,8 +92,9 @@ class TdxClient:
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
             raise SourceError(f"TDX token unavailable: {exc}") from exc
 
-    def get_items(self, path: str) -> list[dict[str, Any]]:
-        """Every row of a TDX list endpoint, paged (see `_rows` for the shapes accepted)."""
+    def get_items(self, path: str, query: Mapping[str, str] | None = None) -> list[dict[str, Any]]:
+        """Every row of a TDX list endpoint, paged (see `_rows` for the shapes accepted).
+        `query` adds OData options such as `$filter`."""
         url = f"{self._api_base}/{path.lstrip('/')}"
         rows: list[dict[str, Any]] = []
         for page in range(MAX_PAGES):
@@ -101,6 +102,7 @@ class TdxClient:
                 "$format": "JSON",
                 "$top": PAGE_SIZE,
                 "$skip": page * PAGE_SIZE,
+                **(query or {}),
             }
             if self._budget is not None:
                 self._budget.check()  # TDX bills every call: never past the monthly ceiling

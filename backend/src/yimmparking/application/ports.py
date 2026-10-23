@@ -5,6 +5,7 @@ Adapters implement these; the application layer and domain never import an adapt
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Protocol
 
@@ -115,7 +116,9 @@ class CurbFeed(Protocol):
 
     def fetch_segments(self) -> list[CurbSegment]: ...
 
-    def fetch_availability(self) -> dict[str, CurbReading]: ...
+    def fetch_availability(self, segment_ids: Sequence[str]) -> dict[str, CurbReading]:
+        """Live counts for these segments only (this city's; others are ignored)."""
+        ...
 
 
 class IParkingDirectory(Protocol):

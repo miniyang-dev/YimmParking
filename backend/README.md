@@ -130,9 +130,11 @@ the endpoint answers 503 and the client hides the section.
 
 - Token: OAuth client credentials, cached until shortly before `expires_in`; a failed token request
   fails fast for a minute instead of each city waiting out a timeout.
-- Segments are read once a day, live counts at most every 5 minutes per city (TDX refreshes them
-  every 5); a failed read is
-  retried after 2 minutes, and served from the last copy meanwhile (up to 30 minutes for counts).
+- Segments (with positions) are read once a day per city. Live counts are asked only for the
+  segments near the search (the nearest 40 within 600 m, by id with `$filter`), so a city with
+  nothing nearby is not asked at all; each count is kept 5 minutes (TDX refreshes them every 5),
+  and a search whose segments are all fresh makes no call. A failed read is retried after
+  2 minutes, and served from the last copy meanwhile (up to 30 minutes for counts).
 - Counts: the car-space reading (`SpaceType` 1) when given, else the all-types total, labelled as such.
   `-1` is "unknown", never zero. Distance is straight-line to the segment's marker point.
 - Checked against the live service (2026-10-23): the list is named per endpoint
@@ -141,7 +143,7 @@ the endpoint answers 503 and the client hides the section.
   ~600 running 15–20 minutes behind (the age is shown past 15 minutes). Segments with only scooter
   spaces (no car type in the breakdown) are not listed. `tests/fixtures/tdx_curb_*.json` are recorded.
 - Rate limit: 5 calls a minute per key (`x-ratelimit-limit-minute`). A search reads at most four
-  (segments and counts for two cities) and then serves from memory; a 429 is retried after 2 minutes.
+  (segments and counts for two cities), usually one (counts for its own city); a 429 is retried after 2 minutes.
 
 ## Taipei counts from TDX when the city's feed stops
 
@@ -164,7 +166,8 @@ counted in `api_usage` (`tdx_calls`, `tdx_kb`); at `YIMM_TDX_MONTHLY_POINTS` (de
 for the rest of the month (`TdxBudgetSpent`, so curb and the Taipei fallback behave as unavailable).
 `/api/v1/health` reports it as meter `tdx` in thousandths of a point, shown in the web client's
 monthly usage. Measured wire sizes (2026-10-23): Taipei off-street counts 53 KB; curb counts 60 KB
-(Taipei) / 73 KB (New Taipei); curb segments 372 KB / 26 KB. The Taipei fallback at every 30 minutes
+(Taipei) / 73 KB (New Taipei); curb segments 372 KB / 26 KB; counts for a few nearby segments under 1 KB, so a curb search
+costs about 1/1,500 point (the call itself). The Taipei fallback at every 30 minutes
 is about 1.5 points a month; at the original every 2 minutes it would have used 3 points in four days.
 
 ## Data caveats
