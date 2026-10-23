@@ -154,8 +154,9 @@ same `TPE…` car park ids) otherwise; the city feed is used again as soon as it
 reading keeps its source (`availability_latest.source`, migration v6); the API returns it per lot
 and `/api/v1/health` per city (`availability_source`), and the web client says when TDX is in use.
 TDX publishes no New Taipei equivalent. A TDX row more than 30 minutes behind the newest row is
-treated as no data. While the city feed is down TDX is read at most every 30 minutes
-(`YIMM_TDX_FALLBACK_MINUTES`), so Taipei counts are up to that old.
+treated as no data. While the city feed is down TDX is read at most every 55 minutes
+(`YIMM_TDX_FALLBACK_MINUTES`), so Taipei counts are up to that old (shown as stale past 15 minutes);
+55, not 60, because a reading expires at an hour and TDX's data already runs ~2 minutes behind.
 
 ## TDX points budget
 
@@ -167,8 +168,8 @@ for the rest of the month (`TdxBudgetSpent`, so curb and the Taipei fallback beh
 `/api/v1/health` reports it as meter `tdx` in thousandths of a point, shown in the web client's
 monthly usage. Measured wire sizes (2026-10-23): Taipei off-street counts 53 KB; curb counts 60 KB
 (Taipei) / 73 KB (New Taipei); curb segments 372 KB / 26 KB; counts for a few nearby segments under 1 KB, so a curb search
-costs about 1/1,500 point (the call itself). The Taipei fallback at every 30 minutes
-is about 1.5 points a month; at the original every 2 minutes it would have used 3 points in four days.
+costs about 1/1,500 point (the call itself). The Taipei fallback at every 55 minutes
+is about 0.8 points a month (1.5 at every 30); at the original every 2 minutes it would have used 3 points in four days.
 
 ## Data caveats
 

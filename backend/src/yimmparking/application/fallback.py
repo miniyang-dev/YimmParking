@@ -19,8 +19,9 @@ log = logging.getLogger(__name__)
 # The Taipei feed runs 4–7 minutes behind when healthy; past this it has stopped.
 PRIMARY_MAX_AGE = timedelta(minutes=30)
 # The backup is metered (TDX: 3 free points a month, about 0.001 per call): read it at most this
-# often, and serve its last answer in between. 30 minutes is about 1.5 points a month.
-BACKUP_INTERVAL = timedelta(minutes=30)
+# often, and serve its last answer in between. 55 minutes is about 0.8 points a month: just under
+# the hour after which a reading counts as expired, since TDX's own data runs ~2 minutes behind.
+BACKUP_INTERVAL = timedelta(minutes=55)
 
 
 class FallbackFeed:

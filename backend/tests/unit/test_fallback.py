@@ -16,7 +16,7 @@ import pytest
 from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.adapters.tdx.client import TdxClient
 from yimmparking.adapters.tdx.offstreet import TdxOffStreetAvailability
-from yimmparking.application.fallback import PRIMARY_MAX_AGE, FallbackFeed
+from yimmparking.application.fallback import BACKUP_INTERVAL, PRIMARY_MAX_AGE, FallbackFeed
 from yimmparking.application.ports import SourceError
 from yimmparking.application.search import SearchNearbyParking
 from yimmparking.domain.geo import GeoPoint
@@ -25,13 +25,14 @@ from yimmparking.domain.model import (
     AvailabilityReading,
     AvailabilitySource,
     City,
+    FreshnessPolicy,
     ParkingLot,
 )
 
 FIXTURE = json.loads(
-    (Path(__file__).resolve().parents[1] / "fixtures" / "tdx_offstreet_availability.json").read_text(
-        encoding="utf-8"
-    )
+    (
+        Path(__file__).resolve().parents[1] / "fixtures" / "tdx_offstreet_availability.json"
+    ).read_text(encoding="utf-8")
 )
 ROWS = FIXTURE["ParkingAvailabilities"]
 NOW = datetime(2026, 10, 23, 4, 50, tzinfo=UTC)  # 12:50 Taipei, just after the recording
@@ -44,7 +45,13 @@ def tdx_answering(body: Any) -> TdxClient:
         return httpx.Response(200, json=body)
 
     http = httpx.Client(transport=httpx.MockTransport(handler))
-    return TdxClient(http, "id", "secret", token_url="https://tdx.example/token", api_base="https://tdx.example/api")
+    return TdxClient(
+        http,
+        "id",
+        "secret",
+        token_url="https://tdx.example/token",
+        api_base="https://tdx.example/api",
+    )
 
 
 class TestOffStreet:
@@ -65,8 +72,14 @@ class TestOffStreet:
         assert counts == {"taipei:TPE0096": 938, "taipei:TPE0070": None}
 
     def test_minus_one_and_scooter_only_are_no_car_count(self) -> None:
-        unknown = {**ROWS[0], "Availabilities": [{"SpaceType": 1, "NumberOfSpaces": 9, "AvailableSpaces": -1}]}
-        scooters = {**ROWS[1], "Availabilities": [{"SpaceType": 2, "NumberOfSpaces": 50, "AvailableSpaces": 20}]}
+        unknown = {
+            **ROWS[0],
+            "Availabilities": [{"SpaceType": 1, "NumberOfSpaces": 9, "AvailableSpaces": -1}],
+        }
+        scooters = {
+            **ROWS[1],
+            "Availabilities": [{"SpaceType": 2, "NumberOfSpaces": 50, "AvailableSpaces": 20}],
+        }
         batch = TdxOffStreetAvailability(
             tdx_answering({"ParkingAvailabilities": [unknown, scooters]}), City.TAIPEI
         ).fetch_availability()
@@ -161,12 +174,30 @@ class TestFallback:
 def test_the_search_says_where_each_count_came_from() -> None:
     store = SqliteStore(":memory:")
     lots = [
-        ParkingLot("taipei:TPE0096", City.TAIPEI, "TPE0096", "府前廣場", "", "", GeoPoint(25.0375, 121.5637)),
-        ParkingLot("taipei:TPE0070", City.TAIPEI, "TPE0070", "松壽廣場", "", "", GeoPoint(25.0376, 121.5637)),
+        ParkingLot(
+            "taipei:TPE0096",
+            City.TAIPEI,
+            "TPE0096",
+            "府前廣場",
+            "",
+            "",
+            GeoPoint(25.0375, 121.5637),
+        ),
+        ParkingLot(
+            "taipei:TPE0070",
+            City.TAIPEI,
+            "TPE0070",
+            "松壽廣場",
+            "",
+            "",
+            GeoPoint(25.0376, 121.5637),
+        ),
     ]
     store.replace_lots(City.TAIPEI, lots)
     store.record_availability(
-        AvailabilityBatch(City.TAIPEI, NOW - timedelta(minutes=3), (AvailabilityReading("taipei:TPE0070", 7),))
+        AvailabilityBatch(
+            City.TAIPEI, NOW - timedelta(minutes=3), (AvailabilityReading("taipei:TPE0070", 7),)
+        )
     )
     store.record_availability(TDX_NOW)
 
@@ -199,3 +230,9 @@ def test_the_backup_is_read_at_most_once_per_interval() -> None:
     clock.at = NOW + timedelta(minutes=31)
     feed.fetch_availability()
     assert backup.calls == 2
+
+
+def test_the_backup_is_read_again_before_its_counts_expire() -> None:
+    # TDX's data runs a couple of minutes behind and the worker ticks every 2: leave room for both.
+    expires = timedelta(seconds=FreshnessPolicy().expire_s)
+    assert BACKUP_INTERVAL + timedelta(minutes=5) <= expires

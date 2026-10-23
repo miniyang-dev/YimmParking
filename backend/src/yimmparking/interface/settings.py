@@ -105,5 +105,6 @@ class Settings:
             # TDX's free plan is 3 points a month, cut off at 105%; stop at 90% of it.
             tdx_monthly_points=float(env.get("YIMM_TDX_MONTHLY_POINTS", "2.7")),
             # How often Taipei's counts are read from TDX while the city's own feed has stopped.
-            tdx_fallback_minutes=int(env.get("YIMM_TDX_FALLBACK_MINUTES", "30")),
+            # Under an hour, or counts expire (FreshnessPolicy) for a few minutes before each read.
+            tdx_fallback_minutes=int(env.get("YIMM_TDX_FALLBACK_MINUTES", "55")),
         )
