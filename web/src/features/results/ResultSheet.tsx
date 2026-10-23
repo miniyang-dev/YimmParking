@@ -31,10 +31,12 @@ interface Props {
   poolSize: number;
   /** Where the walking times came from. */
   walking: "google" | "quota_exhausted" | "unavailable";
+  /** The lot shown beside the sheet (wide screens), marked as the one the course runs to. */
+  activeId?: string;
   onOpen: (lot: Lot) => void;
 }
 
-export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Props) {
+export function ResultSheet({ lots, mode, now, poolSize, walking, activeId, onOpen }: Props) {
   const { t, locale } = useI18n();
   const sections = toSections(lots, mode);
   // Each section continues the numbering of the one before it.
@@ -73,7 +75,12 @@ export function ResultSheet({ lots, mode, now, poolSize, walking, onOpen }: Prop
                 const hours = hoursPhrase(lot.hours);
                 const fee = feePhrase(lot);
                 return (
-                  <tr key={lot.id} className="lots__row" onClick={() => onOpen(lot)}>
+                  <tr
+                    key={lot.id}
+                    className={lot.id === activeId ? "lots__row lots__row--active" : "lots__row"}
+                    aria-current={lot.id === activeId ? "true" : undefined}
+                    onClick={() => onOpen(lot)}
+                  >
                     <td className="lots__no">{number}</td>
                     <td className="lots__sym">
                       <Symbol kind={symbolFor(lot)} />

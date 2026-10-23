@@ -144,6 +144,8 @@ A single column, 480px at most, centred, framed by a 1.5px rule on wide screens.
 
 The detail view keeps the title block but drops its tools, then stacks: back, number and name, course panel (bearing diagram and facts), spaces, navigate, food, fee, facts.
 
+**Desktop (1024px and up): the sheet beside the control.** The frame widens to 1440px at most and locks to the window height. The title block runs across the top: two rows (name and settings, then field, tools and scale) up to 1279px, one row from 1280px. Below it, the sheet keeps a 380–440px left column and the opened lot fills the right. Each column scrolls on its own, so the sheet never leaves the screen. Until a lot is opened, the first one is shown. The shown lot's row carries the course: an 11% purple wash and a purple number, `aria-current`. There is no back button. When the detail column is at least 720px wide (a container query), it splits in two: what to do at the lot on the left (spaces, the way there, the usual day, fee, facts), what is around it on the right (YouBike, food). The second row takes the slack, so a long food list never opens gaps on the left. Preferences and this month's usage sit side by side. Below 1024px the phone layout is unchanged.
+
 ## Elevation & Depth
 
 Flat. There are no shadows. Depth is conveyed by rules: a 1px rule between rows, a 1.5px rule around panels and under bands, and a hatch or dot texture for state. Nothing overlaps; there are no overlays or modals.

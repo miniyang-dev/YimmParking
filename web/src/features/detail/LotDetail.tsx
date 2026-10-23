@@ -26,7 +26,8 @@ interface Props {
   /** Where the search started: every route in this view starts here. */
   origin: Coordinate;
   originLabel: string;
-  onBack: () => void;
+  /** Absent on wide screens, where the sheet stays beside the detail. */
+  onBack?: () => void;
 }
 
 export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Props) {
@@ -55,123 +56,131 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
 
   return (
     <article className="detail">
-      <button type="button" className="back" onClick={onBack}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M15 5l-7 7 7 7" />
-        </svg>
-        {t("detail.back")}
-      </button>
+      <div className="detail__main">
+        {onBack && (
+          <button type="button" className="back" onClick={onBack}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+            {t("detail.back")}
+          </button>
+        )}
 
-      <div className="ctl">
-        <span className="ctl__no" aria-hidden="true">{number}</span>
-        <div>
-          <h2 className="ctl__name">{lot.name}</h2>
-          <p className="ctl__sub">
-            <Symbol kind={symbolFor(lot)} size={18} />
-            <span>
-              {lot.district}
-              {lot.brand !== "other" && (
-                <>
-                  {" · "}
-                  {lot.iparking ? `${t("brand.iparking")} ` : ""}
-                  {t(BRAND_LABEL[lot.brand])}
-                  {lot.brand_evidence === "phone" ? ` (${t("brand.byPhone")})` : ""}
-                </>
-              )}
-            </span>
+        <div className="ctl">
+          <span className="ctl__no" aria-hidden="true">{number}</span>
+          <div>
+            <h2 className="ctl__name">{lot.name}</h2>
+            <p className="ctl__sub">
+              <Symbol kind={symbolFor(lot)} size={18} />
+              <span>
+                {lot.district}
+                {lot.brand !== "other" && (
+                  <>
+                    {" · "}
+                    {lot.iparking ? `${t("brand.iparking")} ` : ""}
+                    {t(BRAND_LABEL[lot.brand])}
+                    {lot.brand_evidence === "phone" ? ` (${t("brand.byPhone")})` : ""}
+                  </>
+                )}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="course">
+          <CourseDiagram bearing={lot.bearing_deg} />
+          <dl className="course__facts">
+            {lot.walk_seconds !== null && (
+              <div>
+                <dt>{t("walk.source")}</dt>
+                <dd className="course__big">
+                  {t("walk.min", { min: walkMinutes(lot.walk_seconds) })}
+                </dd>
+                {lot.walk_meters !== null && (
+                  <dd className="course__sub">
+                    {t("walk.route", { m: formatDistance(lot.walk_meters) })}
+                  </dd>
+                )}
+              </div>
+            )}
+            <div>
+              <dt>{t("course.straight")}</dt>
+              <dd className="course__big">
+                {distance} {compassLabel(lot.bearing_deg, locale)}
+              </dd>
+            </div>
+            <div>
+              <dt>{t("detail.fee")}</dt>
+              <dd>{t(fee.key, fee.vars)}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="spaces">
+          <SpaceCell availability={a} now={now} />
+          <p className="spaces__text">
+            {age !== null && a.state === "known" ? t("spaces.ago", { min: age }) : ""}
+            {warning && <span className="spaces__warn">{warning}</span>}
+            {hours && <span className="spaces__hours">{t(hours.key, hours.vars)}</span>}
+            {a.source === "tdx" && <span className="spaces__warn">{t("source.tdxLot")}</span>}
           </p>
         </div>
+
+        <Movement lot={lot} />
+
+        <a
+          className="go"
+          href={directionsUrl(origin, lot, { travelMode: "driving" })}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 11l18-8-8 18-2-8-8-2z" />
+          </svg>
+          {t("detail.navigate")}
+        </a>
+        <p className="go__from">{t("detail.navFrom", { origin: originLabel })}</p>
+        <ShareButton title={lot.name} text={[lot.name, lot.address].filter(Boolean).join("・")} />
+
+        <TypicalDay key={`typical-${lot.id}`} lotId={lot.id} now={now} />
       </div>
 
-      <div className="course">
-        <CourseDiagram bearing={lot.bearing_deg} />
-        <dl className="course__facts">
-          {lot.walk_seconds !== null && (
-            <div>
-              <dt>{t("walk.source")}</dt>
-              <dd className="course__big">
-                {t("walk.min", { min: walkMinutes(lot.walk_seconds) })}
+      {/* Wide detail (app.css "desktop"): main and tail on the left, this beside them. Narrow: in
+          reading order, the wrappers add nothing. */}
+      <div className="detail__side">
+        <BikeSection key={`bikes-${lot.id}`} lot={lot} now={now} />
+        <FoodSection key={lot.id} lot={lot} origin={origin} originLabel={originLabel} />
+      </div>
+
+      <div className="detail__tail">
+        <details className="fee">
+          <summary>{t("detail.fee")}</summary>
+          <p>{lot.fee_text || t("fee.unknown")}</p>
+        </details>
+
+        <dl className="facts">
+          {facts.map(([label, value]) => (
+            <div className="facts__row" key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+          {lot.phone && (
+            <div className="facts__row">
+              <dt>{t("detail.phone")}</dt>
+              <dd>
+                {dial ? (
+                  <a className="link link--plain" href={`tel:${dial}`}>
+                    {lot.phone}
+                  </a>
+                ) : (
+                  lot.phone
+                )}
               </dd>
-              {lot.walk_meters !== null && (
-                <dd className="course__sub">
-                  {t("walk.route", { m: formatDistance(lot.walk_meters) })}
-                </dd>
-              )}
             </div>
           )}
-          <div>
-            <dt>{t("course.straight")}</dt>
-            <dd className="course__big">
-              {distance} {compassLabel(lot.bearing_deg, locale)}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("detail.fee")}</dt>
-            <dd>{t(fee.key, fee.vars)}</dd>
-          </div>
         </dl>
       </div>
-
-      <div className="spaces">
-        <SpaceCell availability={a} now={now} />
-        <p className="spaces__text">
-          {age !== null && a.state === "known" ? t("spaces.ago", { min: age }) : ""}
-          {warning && <span className="spaces__warn">{warning}</span>}
-          {hours && <span className="spaces__hours">{t(hours.key, hours.vars)}</span>}
-          {a.source === "tdx" && <span className="spaces__warn">{t("source.tdxLot")}</span>}
-        </p>
-      </div>
-
-      <Movement lot={lot} />
-
-      <a
-        className="go"
-        href={directionsUrl(origin, lot, { travelMode: "driving" })}
-        target="_blank"
-        rel="noreferrer"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M3 11l18-8-8 18-2-8-8-2z" />
-        </svg>
-        {t("detail.navigate")}
-      </a>
-      <p className="go__from">{t("detail.navFrom", { origin: originLabel })}</p>
-      <ShareButton title={lot.name} text={[lot.name, lot.address].filter(Boolean).join("・")} />
-
-      <TypicalDay key={`typical-${lot.id}`} lotId={lot.id} now={now} />
-
-
-      <BikeSection key={`bikes-${lot.id}`} lot={lot} now={now} />
-
-      <FoodSection key={lot.id} lot={lot} origin={origin} originLabel={originLabel} />
-
-      <details className="fee">
-        <summary>{t("detail.fee")}</summary>
-        <p>{lot.fee_text || t("fee.unknown")}</p>
-      </details>
-
-      <dl className="facts">
-        {facts.map(([label, value]) => (
-          <div className="facts__row" key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-        {lot.phone && (
-          <div className="facts__row">
-            <dt>{t("detail.phone")}</dt>
-            <dd>
-              {dial ? (
-                <a className="link link--plain" href={`tel:${dial}`}>
-                  {lot.phone}
-                </a>
-              ) : (
-                lot.phone
-              )}
-            </dd>
-          </div>
-        )}
-      </dl>
 
     </article>
   );

@@ -24,6 +24,7 @@ OWN-WORLD: White "runnable forest" ground with fine brown contour texture only i
 STORY: Visitor types an address and sees the start triangle with ranked controls. They understand brand priority from the symbols and group bands, read spaces and freshness without colour, open one lot, see bearing and distance as a course line, then food within 1 km of that lot, and navigate out to Google Maps.
 
 FIRST VIEWPORT: 390x844. Contour-textured title block at top: product name, address field led by a purple start triangle, scale bar and brand/distance toggle. Below, the description sheet fills the screen: yellow group band, ruled rows (number, symbol, name with distance and bearing, spaces cell at the right). No row is selected in the list view; purple appears only on the start triangle until a lot is opened.
+Desktop 1440x900: title block across the top; the sheet on the left (380–440px) and the first lot's detail on the right, its row marked with the course purple; the detail splits into the lot (left) and what is around it (right, YouBike and food).
 
 FORM: Orienteering map and legend (challenger, competitive verdict, chosen by the user over the assigned atlas), seed key 9fd90d67.
 

@@ -18,6 +18,7 @@ import { updatePlaces } from "./state/places";
 import { usePrefs } from "./state/prefs";
 import { takeLaunchLocate, useRoute } from "./state/route";
 import { useParkingSearch } from "./state/queries";
+import { useWide } from "./state/layout";
 import { useTheme } from "./state/theme";
 
 function errorKey(error: unknown): StringKey {
@@ -62,6 +63,14 @@ export function App() {
   const lots = useMemo(() => data?.results ?? [], [data]);
   const selectedIndex = route.lot ? lots.findIndex((lot) => lot.id === route.lot) : -1;
   const selected = selectedIndex >= 0 ? (lots[selectedIndex] as Lot) : null;
+  const wide = useWide();
+  // On a wide screen the first control is shown until another is opened (the URL stays as is).
+  const shown = selected ?? (wide && !route.lot ? (lots[0] ?? null) : null);
+  const detailPane = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    detailPane.current?.scrollTo(0, 0);
+  }, [shown?.id]);
 
   const newestObservation = useMemo(() => {
     const times = lots
@@ -91,7 +100,7 @@ export function App() {
   const age = ageMinutes(newestObservation, now);
   const asOfLabel = age === null ? null : age === 0 ? t("scale.asofNow") : t("scale.asof", { min: age });
   const radiusLabel = data ? t("scale.within", { radius: formatDistance(data.meta.radius_m) }) : null;
-  const showScale = !selected && !settingsOpen;
+  const showScale = !settingsOpen && (wide || !selected);
 
   function locate() {
     if (!navigator.geolocation) {
@@ -128,6 +137,88 @@ export function App() {
 
   const initialText = route.q ?? route.label ?? data?.origin.label ?? "";
 
+  const listBody =
+    route.lot && data && !selected ? (
+      <p className="notice" role="alert">
+        {t("detail.notFound")}{" "}
+        <button type="button" className="textbtn" onClick={() => setRoute({ lot: null })}>
+          {t("detail.back")}
+        </button>
+      </p>
+    ) : search.isPending && search.fetchStatus === "fetching" ? (
+      <>
+        <p className="sr-only" role="status">
+          {t("loading")}
+        </p>
+        <SheetSkeleton />
+      </>
+    ) : search.isError ? (
+      <div className="notice" role="alert">
+        <p>{t(errorKey(search.error))}</p>
+        {isRetryable(search.error) && (
+          <button type="button" className="textbtn" onClick={() => void search.refetch()}>
+            {t("retry")}
+          </button>
+        )}
+      </div>
+    ) : data ? (
+      <>
+        {data.alternatives.length > 0 && (
+          <p className="alts">
+            {t("alternatives")}{" "}
+            {data.alternatives.map((alt) => (
+              <button
+                key={`${alt.lat},${alt.lng}`}
+                type="button"
+                className="textbtn"
+                onClick={() => searchFrom(alt)}
+              >
+                {alt.label}
+              </button>
+            ))}
+          </p>
+        )}
+        <StaleNotice stale={data.meta.stale_sources} lots={lots} />
+        {lots.length === 0 ? (
+          <p className="notice">{t("empty.none")}</p>
+        ) : (
+          <ResultSheet
+            lots={lots}
+            mode={data.meta.mode}
+            now={now}
+            poolSize={data.meta.pool_size}
+            walking={data.meta.walking}
+            activeId={wide ? shown?.id : undefined}
+            onOpen={(lot) => setRoute({ lot: lot.id })}
+          />
+        )}
+        <CurbSection origin={{ lat: data.origin.lat, lng: data.origin.lng }} now={now} />
+      </>
+    ) : (
+      <section className="empty">
+        <h2>{t("empty.title")}</h2>
+        <p>{t("empty.body")}</p>
+        <SavedPlaces onPick={pickPlace} />
+      </section>
+    );
+
+  const detail = shown ? (
+    <LotDetail
+      lot={shown}
+      number={lots.indexOf(shown) + 1}
+      now={now}
+      origin={{ lat: data?.origin.lat ?? shown.lat, lng: data?.origin.lng ?? shown.lng }}
+      originLabel={initialText || t("search.origin")}
+      onBack={wide ? undefined : () => setRoute({ lot: null })}
+    />
+  ) : null;
+
+  const locateNotice = locateError && (
+    <p className="notice" role="alert">
+      {t("error.geolocation")}
+    </p>
+  );
+
   return (
     <div className="app">
       <SearchHeader
@@ -137,7 +228,7 @@ export function App() {
         radiusLabel={showScale ? radiusLabel : null}
         asOfLabel={showScale ? asOfLabel : null}
         locating={locating}
-        compact={selected !== null || settingsOpen}
+        compact={settingsOpen || (!wide && selected !== null)}
         theme={theme}
         onTheme={cycleTheme}
         onSettings={() => setRoute({ view: "settings" })}
@@ -152,89 +243,30 @@ export function App() {
         onPickPlace={pickPlace}
       />
 
-      <main className="main">
-        {locateError && (
-          <p className="notice" role="alert">
-            {t("error.geolocation")}
-          </p>
-        )}
-
-        {settingsOpen ? (
+      {settingsOpen ? (
+        <main className="main">
+          {locateNotice}
           <SettingsPage onDone={() => setRoute({ view: null })} />
-        ) : selected ? (
-          <LotDetail
-            lot={selected}
-            number={selectedIndex + 1}
-            now={now}
-            origin={{ lat: data?.origin.lat ?? selected.lat, lng: data?.origin.lng ?? selected.lng }}
-            originLabel={initialText || t("search.origin")}
-            onBack={() => setRoute({ lot: null })}
-          />
-        ) : route.lot && data ? (
-          <p className="notice" role="alert">
-            {t("detail.notFound")}{" "}
-            <button type="button" className="textbtn" onClick={() => setRoute({ lot: null })}>
-              {t("detail.back")}
-            </button>
-          </p>
-        ) : search.isPending && search.fetchStatus === "fetching" ? (
-          <>
-            <p className="sr-only" role="status">
-              {t("loading")}
-            </p>
-            <SheetSkeleton />
-          </>
-        ) : search.isError ? (
-          <div className="notice" role="alert">
-            <p>{t(errorKey(search.error))}</p>
-            {isRetryable(search.error) && (
-              <button type="button" className="textbtn" onClick={() => void search.refetch()}>
-                {t("retry")}
-              </button>
-            )}
+        </main>
+      ) : wide ? (
+        // Desktop: the sheet stays on the left, the control being run to fills the right.
+        <main className="main desk">
+          <div className="desk__list">
+            {locateNotice}
+            {listBody}
+            {detail && <Legend />}
           </div>
-        ) : data ? (
-          <>
-            {data.alternatives.length > 0 && (
-              <p className="alts">
-                {t("alternatives")}{" "}
-                {data.alternatives.map((alt) => (
-                  <button
-                    key={`${alt.lat},${alt.lng}`}
-                    type="button"
-                    className="textbtn"
-                    onClick={() => searchFrom(alt)}
-                  >
-                    {alt.label}
-                  </button>
-                ))}
-              </p>
-            )}
-            <StaleNotice stale={data.meta.stale_sources} lots={lots} />
-            {lots.length === 0 ? (
-              <p className="notice">{t("empty.none")}</p>
-            ) : (
-              <ResultSheet
-                lots={lots}
-                mode={data.meta.mode}
-                now={now}
-                poolSize={data.meta.pool_size}
-                walking={data.meta.walking}
-                onOpen={(lot) => setRoute({ lot: lot.id })}
-              />
-            )}
-            <CurbSection origin={{ lat: data.origin.lat, lng: data.origin.lng }} now={now} />
-          </>
-        ) : (
-          <section className="empty">
-            <h2>{t("empty.title")}</h2>
-            <p>{t("empty.body")}</p>
-            <SavedPlaces onPick={pickPlace} />
-          </section>
-        )}
-
-        {showScale && <Legend />}
-      </main>
+          <div className="desk__detail" ref={detailPane}>
+            {detail ?? <Legend />}
+          </div>
+        </main>
+      ) : (
+        <main className="main">
+          {locateNotice}
+          {detail ?? listBody}
+          {showScale && <Legend />}
+        </main>
+      )}
     </div>
   );
 }

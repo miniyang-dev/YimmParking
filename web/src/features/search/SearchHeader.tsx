@@ -90,6 +90,7 @@ export function SearchHeader({
 
       <div
         ref={searchArea}
+        className="head__search"
         onKeyDown={(event) => {
           if (event.key === "Escape") setPanelOpen(false);
         }}
