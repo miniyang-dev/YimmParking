@@ -16,7 +16,12 @@ import pytest
 from yimmparking.adapters.store.sqlite import SqliteStore
 from yimmparking.adapters.tdx.client import TdxClient
 from yimmparking.adapters.tdx.offstreet import TdxOffStreetAvailability
-from yimmparking.application.fallback import BACKUP_INTERVAL, PRIMARY_MAX_AGE, FallbackFeed
+from yimmparking.application.fallback import (
+    BACKUP_INTERVAL,
+    PRIMARY_MAX_AGE,
+    TDX_TAIPEI_CADENCE,
+    FallbackFeed,
+)
 from yimmparking.application.ports import SourceError
 from yimmparking.application.search import SearchNearbyParking
 from yimmparking.domain.geo import GeoPoint
@@ -233,6 +238,7 @@ def test_the_backup_is_read_at_most_once_per_interval() -> None:
 
 
 def test_the_backup_is_read_again_before_its_counts_expire() -> None:
-    # TDX's data runs a couple of minutes behind and the worker ticks every 2: leave room for both.
+    # Just before a read, a reading can be as old as TDX's own cadence plus our interval; allow
+    # the few minutes past the hour of a worker tick and TDX's publishing delay, no more.
     expires = timedelta(seconds=FreshnessPolicy().expire_s)
-    assert BACKUP_INTERVAL + timedelta(minutes=5) <= expires
+    assert expires + timedelta(minutes=5) >= TDX_TAIPEI_CADENCE + BACKUP_INTERVAL
