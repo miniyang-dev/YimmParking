@@ -13,6 +13,7 @@ const av = (over: Partial<Availability>): Availability => ({
   observed_at: "2026-10-10T14:37:00Z",
   freshness: "fresh",
   suspect: false,
+  source: "city",
   ...over,
 });
 

@@ -25,6 +25,8 @@ from yimmparking.adapters.tdx.client import API_BASE as TDX_API_BASE
 from yimmparking.adapters.tdx.client import TOKEN_URL as TDX_TOKEN_URL
 from yimmparking.adapters.tdx.client import TdxClient
 from yimmparking.adapters.tdx.curb import TdxCurbFeed
+from yimmparking.adapters.tdx.offstreet import TdxOffStreetAvailability
+from yimmparking.application.fallback import FallbackFeed
 from yimmparking.application.feed_watch import FeedWatch
 from yimmparking.application.insights import LotInsights
 from yimmparking.application.limits import (
@@ -122,7 +124,19 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
     clock = SystemClock()
     store = SqliteStore(settings.db_path)
 
-    feeds: list[ParkingFeed] = [TaipeiFeed(http), NewTaipeiFeed(http, now=clock.now)]
+    tdx = TdxClient(
+        http,
+        settings.tdx_client_id,
+        settings.tdx_client_secret,
+        token_url=settings.tdx_token_url or TDX_TOKEN_URL,
+        api_base=settings.tdx_api_base or TDX_API_BASE,
+    )
+    # Taipei's own real-time feed can stall for days; with TDX credentials its counts fall back to
+    # TDX's off-street data (same car park ids) while it does. TDX has no New Taipei equivalent.
+    taipei: ParkingFeed = TaipeiFeed(http)
+    if tdx.configured:
+        taipei = FallbackFeed(taipei, TdxOffStreetAvailability(tdx, City.TAIPEI), clock)
+    feeds: list[ParkingFeed] = [taipei, NewTaipeiFeed(http, now=clock.now)]
     usage = UsageGate(
         store,
         clock,
@@ -168,13 +182,6 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
                 router, store, clock, timedelta(days=settings.route_cache_ttl_days)
             )
 
-    tdx = TdxClient(
-        http,
-        settings.tdx_client_id,
-        settings.tdx_client_secret,
-        token_url=settings.tdx_token_url or TDX_TOKEN_URL,
-        api_base=settings.tdx_api_base or TDX_API_BASE,
-    )
     curb = SearchNearbyCurb(
         [TdxCurbFeed(tdx, city) for city in City], clock, configured=tdx.configured
     )

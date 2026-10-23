@@ -12,6 +12,7 @@ const full = (freshness: Availability["freshness"]): Availability => ({
   observed_at: "2026-10-10T14:35:00Z",
   freshness,
   suspect: false,
+  source: "city",
 });
 
 function cell(availability: Availability) {

@@ -34,6 +34,13 @@ class BrandEvidence(StrEnum):
     NONE = "none"
 
 
+class AvailabilitySource(StrEnum):
+    """Where a lot's real-time count came from."""
+
+    CITY = "city"  # the city's own feed (臺北市 / 新北市 open data)
+    TDX = "tdx"  # MOTC TDX, used for a city while its own feed has stopped
+
+
 class Freshness(StrEnum):
     FRESH = "fresh"
     STALE = "stale"
@@ -74,6 +81,7 @@ class Availability:
     count: int | None
     observed_at: datetime | None = None
     suspect: bool = False
+    source: AvailabilitySource | None = None
 
     @property
     def is_known(self) -> bool:
@@ -85,14 +93,18 @@ class Availability:
 
     @classmethod
     def from_reading(
-        cls, raw: int | None, total_car: int | None, observed_at: datetime | None
+        cls,
+        raw: int | None,
+        total_car: int | None,
+        observed_at: datetime | None,
+        source: AvailabilitySource | None = None,
     ) -> Availability:
         if raw is None or raw < 0:
-            return cls(count=None, observed_at=observed_at)
+            return cls(count=None, observed_at=observed_at, source=source)
         # A source's total capacity is unreliable, so an over-capacity reading is flagged rather
         # than dropped or clamped: the caller decides how loudly to present it.
         suspect = total_car is not None and raw > total_car
-        return cls(count=raw, observed_at=observed_at, suspect=suspect)
+        return cls(count=raw, observed_at=observed_at, suspect=suspect, source=source)
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +175,7 @@ class AvailabilityBatch:
     city: City
     observed_at: datetime
     readings: tuple[AvailabilityReading, ...]
+    source: AvailabilitySource = AvailabilitySource.CITY
 
 
 @dataclass(frozen=True, slots=True)

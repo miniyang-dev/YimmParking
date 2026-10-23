@@ -118,6 +118,7 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
           {age !== null && a.state === "known" ? t("spaces.ago", { min: age }) : ""}
           {warning && <span className="spaces__warn">{warning}</span>}
           {hours && <span className="spaces__hours">{t(hours.key, hours.vars)}</span>}
+          {a.source === "tdx" && <span className="spaces__warn">{t("source.tdxLot")}</span>}
         </p>
       </div>
 

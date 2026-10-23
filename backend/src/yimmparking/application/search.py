@@ -108,7 +108,9 @@ class SearchNearbyParking:
                 log.warning("travel times unavailable: %s", exc)
         ranked = arrange([(c, walks.get(c.lot.id)) for c in pool.candidates], policy)
 
-        readings = self._repo.latest_availability([item.lot.id for item in ranked])
+        ids = [item.lot.id for item in ranked]
+        readings = self._repo.latest_availability(ids)
+        sources = self._repo.availability_sources(ids)
         now = self._clock.now()
         hits: list[ParkingHit] = []
         for item in ranked:
@@ -119,10 +121,13 @@ class SearchNearbyParking:
             else:
                 count, observed_at = reading
                 freshness = self._freshness.classify(observed_at, now)
-                availability = Availability.from_reading(count, item.lot.total_car, observed_at)
+                source = sources.get(item.lot.id)
+                availability = Availability.from_reading(
+                    count, item.lot.total_car, observed_at, source
+                )
                 if freshness is Freshness.EXPIRED:
                     # A reading this old is worse than none: showing it would imply a live count.
-                    availability = Availability(count=None, observed_at=observed_at)
+                    availability = Availability(count=None, observed_at=observed_at, source=source)
             hits.append(ParkingHit(ranked=item, availability=availability, freshness=freshness))
         return ParkingSearchResult(
             center=center,

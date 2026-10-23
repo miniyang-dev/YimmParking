@@ -149,6 +149,7 @@ def to_lot_dto(
             observed_at=a.observed_at,
             freshness=hit.freshness.value,
             suspect=a.suspect,
+            source=a.source.value if a.source else None,
         ),
         fee_text=lot.fee_text,
         hourly_rate=hourly_car_rate(lot.fee_text),
@@ -282,6 +283,9 @@ def create_app(container: Container | None = None, settings: Settings | None = N
                 lots=s.lots,
                 availability_as_of=s.as_of,
                 stale=s.stale,
+                availability_source=(
+                    source.value if (source := ct.store.latest_source(s.city)) else None
+                ),
             )
             for s in source_statuses(ct.store, ct.clock.now())
         ]

@@ -1,0 +1,106 @@
+{
+ "UpdateTime": "2026-10-23T12:49:03+08:00",
+ "UpdateInterval": -1,
+ "SrcUpdateTime": "2026-10-23T12:48:00+08:00",
+ "SrcUpdateInterval": 60,
+ "AuthorityCode": "TPE",
+ "ParkingAvailabilities": [
+  {
+   "CarParkID": "TPE0096",
+   "CarParkName": {
+    "Zh_tw": "府前廣場地下停車場"
+   },
+   "TotalSpaces": 1998,
+   "AvailableSpaces": 938,
+   "Availabilities": [
+    {
+     "SpaceType": 1,
+     "NumberOfSpaces": 1998,
+     "AvailableSpaces": 938
+    },
+    {
+     "SpaceType": 2,
+     "NumberOfSpaces": 1405,
+     "AvailableSpaces": 1267
+    },
+    {
+     "SpaceType": 7,
+     "NumberOfSpaces": 40,
+     "AvailableSpaces": 9
+    },
+    {
+     "SpaceType": 9,
+     "NumberOfSpaces": 45,
+     "AvailableSpaces": 4
+    }
+   ],
+   "ServiceStatus": 1,
+   "FullStatus": 0,
+   "ChargeStatus": 1,
+   "DataCollectTime": "2026-10-23T12:47:23+08:00"
+  },
+  {
+   "CarParkID": "TPE0070",
+   "CarParkName": {
+    "Zh_tw": "松壽廣場地下停車場"
+   },
+   "TotalSpaces": 446,
+   "AvailableSpaces": 412,
+   "Availabilities": [
+    {
+     "SpaceType": 1,
+     "NumberOfSpaces": 446,
+     "AvailableSpaces": 412
+    },
+    {
+     "SpaceType": 7,
+     "NumberOfSpaces": 8,
+     "AvailableSpaces": 8
+    },
+    {
+     "SpaceType": 9,
+     "NumberOfSpaces": 9,
+     "AvailableSpaces": 9
+    }
+   ],
+   "ServiceStatus": 1,
+   "FullStatus": 0,
+   "ChargeStatus": 1,
+   "DataCollectTime": "2026-10-23T12:47:21+08:00"
+  },
+  {
+   "CarParkID": "TPE0567",
+   "CarParkName": {
+    "Zh_tw": "臺北市災害應變中心地下停車場"
+   },
+   "TotalSpaces": 169,
+   "AvailableSpaces": 4,
+   "Availabilities": [
+    {
+     "SpaceType": 1,
+     "NumberOfSpaces": 169,
+     "AvailableSpaces": 4
+    },
+    {
+     "SpaceType": 2,
+     "NumberOfSpaces": 197,
+     "AvailableSpaces": 58
+    },
+    {
+     "SpaceType": 7,
+     "NumberOfSpaces": 3,
+     "AvailableSpaces": 0
+    },
+    {
+     "SpaceType": 9,
+     "NumberOfSpaces": 5,
+     "AvailableSpaces": 1
+    }
+   ],
+   "ServiceStatus": 1,
+   "FullStatus": 0,
+   "ChargeStatus": 1,
+   "DataCollectTime": "2026-10-23T12:47:45+08:00"
+  }
+ ]
+}

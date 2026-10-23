@@ -82,4 +82,8 @@ MIGRATIONS: tuple[str, ...] = (
     # v5: availability history as changes only, plus the polls that say when a feed was read.
     # The v1 table it replaces is converted and dropped by `yimmparking convert-history`.
     history.SCHEMA,
+    # v6: which source each latest reading came from (NULL for older rows: the city's feed).
+    """
+    ALTER TABLE availability_latest ADD COLUMN source TEXT;
+    """,
 )

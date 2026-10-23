@@ -8,7 +8,14 @@ from datetime import datetime
 from yimmparking.adapters.store import history
 from yimmparking.adapters.store.database import IN_CHUNK, Database, chunks, from_iso, to_iso
 from yimmparking.domain.geo import BoundingBox, GeoPoint
-from yimmparking.domain.model import AvailabilityBatch, Brand, BrandEvidence, City, ParkingLot
+from yimmparking.domain.model import (
+    AvailabilityBatch,
+    AvailabilitySource,
+    Brand,
+    BrandEvidence,
+    City,
+    ParkingLot,
+)
 
 
 class SqliteLots:
@@ -95,14 +102,18 @@ class SqliteLots:
             # Only move "latest" forward: re-running with an older feed must not rewind it.
             conn.executemany(
                 """
-                INSERT INTO availability_latest (lot_id, city, count, observed_at)
-                VALUES (?,?,?,?)
+                INSERT INTO availability_latest (lot_id, city, count, observed_at, source)
+                VALUES (?,?,?,?,?)
                 ON CONFLICT(lot_id) DO UPDATE SET
                     count = excluded.count,
-                    observed_at = excluded.observed_at
+                    observed_at = excluded.observed_at,
+                    source = excluded.source
                 WHERE excluded.observed_at >= availability_latest.observed_at
                 """,
-                [(r.lot_id, batch.city.value, r.count, observed) for r in batch.readings],
+                [
+                    (r.lot_id, batch.city.value, r.count, observed, batch.source.value)
+                    for r in batch.readings
+                ],
             )
 
     def latest_availability(self, lot_ids: list[str]) -> dict[str, tuple[int | None, datetime]]:
@@ -118,6 +129,33 @@ class SqliteLots:
                 for r in rows:
                     out[r["lot_id"]] = (r["count"], from_iso(r["observed_at"]))
         return out
+
+    def availability_sources(self, lot_ids: list[str]) -> dict[str, AvailabilitySource]:
+        """Where each lot's latest reading came from (rows from before sources were kept count
+        as the city's own feed)."""
+        out: dict[str, AvailabilitySource] = {}
+        with self._db.read() as conn:
+            for chunk in chunks(lot_ids, IN_CHUNK):
+                marks = ",".join("?" * len(chunk))
+                rows = conn.execute(
+                    f"SELECT lot_id, source FROM availability_latest WHERE lot_id IN ({marks})",
+                    chunk,
+                ).fetchall()
+                for r in rows:
+                    out[r["lot_id"]] = AvailabilitySource(r["source"] or AvailabilitySource.CITY)
+        return out
+
+    def latest_source(self, city: City) -> AvailabilitySource | None:
+        """The source of the city's most recent reading: tells whether a fallback is in use."""
+        with self._db.read() as conn:
+            row = conn.execute(
+                "SELECT source FROM availability_latest WHERE city = ? "
+                "ORDER BY observed_at DESC LIMIT 1",
+                (city.value,),
+            ).fetchone()
+        if row is None:
+            return None
+        return AvailabilitySource(row["source"] or AvailabilitySource.CITY)
 
     def last_availability_at(self) -> dict[City, datetime]:
         with self._db.read() as conn:

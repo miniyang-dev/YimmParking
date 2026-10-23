@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { staleForList, taipeiTime, type StaleSource } from "./cities";
+import { staleForList, taipeiTime, tdxCities, type StaleSource } from "./cities";
 import type { Lot } from "./types";
 
 const lot = (city: Lot["city"]) => ({ city }) as Lot;
@@ -21,5 +21,17 @@ describe("taipeiTime", () => {
   it("shows Taipei time whatever the device zone", () => {
     expect(taipeiTime("2026-10-19T02:26:00Z")).toBe("10/19 10:26");
     expect(taipeiTime("2026-12-31T16:05:00Z")).toBe("01/01 00:05");
+  });
+});
+
+describe("tdxCities", () => {
+  const withSource = (city: Lot["city"], source: "city" | "tdx" | null) =>
+    ({ city, availability: { source } }) as unknown as Lot;
+
+  it("names each city once, only where a count came from TDX", () => {
+    expect(
+      tdxCities([withSource("taipei", "tdx"), withSource("taipei", "tdx"), withSource("new_taipei", "city")]),
+    ).toEqual(["taipei"]);
+    expect(tdxCities([withSource("taipei", "city"), withSource("taipei", null)])).toEqual([]);
   });
 });

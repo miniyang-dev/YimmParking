@@ -12,6 +12,7 @@ from yimmparking.domain.curb import CurbReading, CurbSegment
 from yimmparking.domain.geo import BoundingBox, GeoPoint
 from yimmparking.domain.model import (
     AvailabilityBatch,
+    AvailabilitySource,
     BikeStation,
     City,
     GeocodeCandidate,
@@ -69,6 +70,14 @@ class Alerter(Protocol):
     """Tells the owner something needs attention (a push, a chat message...)."""
 
     def send(self, subject: str, body: str) -> None: ...
+
+
+class AvailabilityFeed(Protocol):
+    """A second source of one city's real-time counts (no static lot data of its own)."""
+
+    city: City
+
+    def fetch_availability(self) -> AvailabilityBatch: ...
 
 
 class ParkingFeed(Protocol):
@@ -192,5 +201,9 @@ class LotRepository(Protocol):
     def record_availability(self, batch: AvailabilityBatch) -> None: ...
 
     def latest_availability(self, lot_ids: list[str]) -> dict[str, tuple[int | None, datetime]]: ...
+
+    def availability_sources(self, lot_ids: list[str]) -> dict[str, AvailabilitySource]: ...
+
+    def latest_source(self, city: City) -> AvailabilitySource | None: ...
 
     def last_availability_at(self) -> dict[City, datetime]: ...

@@ -160,6 +160,11 @@ export interface components {
              * @description Reading exceeds the lot's listed capacity; treat as rough
              */
             suspect: boolean;
+            /**
+             * Source
+             * @description city: the city's own feed; tdx: MOTC TDX, used while the city's has stopped
+             */
+            source: ("city" | "tdx") | null;
         };
         /** BikeSearchResponse */
         BikeSearchResponse: {
@@ -561,6 +566,11 @@ export interface components {
              * @description No reading, or the newest is over an hour old
              */
             stale: boolean;
+            /**
+             * Availability Source
+             * @description Source of the city's newest reading; tdx means its own feed has stopped
+             */
+            availability_source: ("city" | "tdx") | null;
         };
         /** StaleSourceDTO */
         StaleSourceDTO: {

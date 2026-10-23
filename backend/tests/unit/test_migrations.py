@@ -72,3 +72,7 @@ def test_existing_rows_survive_an_upgrade(tmp_path: Path) -> None:
     conn = sqlite3.connect(db)
     assert conn.execute("SELECT COUNT(*) FROM place_cache").fetchone()[0] == 1
     conn.close()
+
+
+def test_v6_records_the_source_of_each_latest_reading() -> None:
+    assert "ADD COLUMN source" in schema.MIGRATIONS[5]

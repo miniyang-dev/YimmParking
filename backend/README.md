@@ -142,6 +142,17 @@ the endpoint answers 503 and the client hides the section.
 - Rate limit: 5 calls a minute per key (`x-ratelimit-limit-minute`). A search reads at most four
   (segments and counts for two cities) and then serves from memory; a 429 is retried after 2 minutes.
 
+## Taipei counts from TDX when the city's feed stops
+
+臺北市's own feed has stalled for days while still answering (the same UPDATETIME every time). With
+TDX credentials set, Taipei's counts come from the city feed while its newest reading is under
+30 minutes old, and from TDX's off-street data (`/v1/Parking/OffStreet/ParkingAvailability/City/Taipei`,
+same `TPE…` car park ids) otherwise; the city feed is used again as soon as it moves. Each latest
+reading keeps its source (`availability_latest.source`, migration v6); the API returns it per lot
+and `/api/v1/health` per city (`availability_source`), and the web client says when TDX is in use.
+TDX publishes no New Taipei equivalent. A TDX row more than 30 minutes behind the newest row is
+treated as no data.
+
 ## Data caveats
 
 - No operator field exists in either feed; brand is inferred from name, then phone number.

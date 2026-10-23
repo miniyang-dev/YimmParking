@@ -1,4 +1,4 @@
-import { CITY_LABEL, staleForList, taipeiTime, type StaleSource } from "../../domain/cities";
+import { CITY_LABEL, staleForList, taipeiTime, tdxCities, type StaleSource } from "../../domain/cities";
 import type { Lot } from "../../domain/types";
 import { useI18n } from "../../i18n";
 
@@ -9,9 +9,17 @@ import { useI18n } from "../../i18n";
 export function StaleNotice({ stale, lots }: { stale: readonly StaleSource[]; lots: readonly Lot[] }) {
   const { t } = useI18n();
   const shown = staleForList(stale, lots);
-  if (shown.length === 0) return null;
+  const fallback = tdxCities(lots);
+  if (shown.length === 0 && fallback.length === 0) return null;
   return (
     <div className="notice" role="status">
+      {fallback.length > 0 && (
+        <p>
+          {t("source.tdxList", {
+            city: fallback.map((city) => t(CITY_LABEL[city])).join(t("city.join")),
+          })}
+        </p>
+      )}
       {shown.map((source) => {
         const city = t(CITY_LABEL[source.city]);
         return (

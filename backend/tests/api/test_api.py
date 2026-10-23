@@ -600,3 +600,13 @@ def test_a_places_provider_error_is_502_not_503() -> None:
         r = c.get("/api/v1/food/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng})
     container.close()
     assert r.status_code == 502 and r.json()["error"]["code"] == "places_unavailable"
+
+
+def test_each_count_says_which_feed_it_came_from(client: TestClient) -> None:
+    body = client.get(
+        "/api/v1/parking/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}
+    ).json()
+    assert {lot["availability"]["source"] for lot in body["results"]} == {"city"}
+    health = client.get("/api/v1/health").json()
+    by_city = {s["city"]: s["availability_source"] for s in health["sources"]}
+    assert by_city == {"taipei": "city", "new_taipei": None}

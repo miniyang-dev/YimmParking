@@ -18,6 +18,15 @@ export function staleForList(stale: readonly StaleSource[], lots: readonly Lot[]
   return stale.filter((source) => cities.has(source.city));
 }
 
+/** Cities whose counts in this list come from TDX (their own feed has stopped), in list order. */
+export function tdxCities(lots: readonly Lot[]): CityKey[] {
+  const out: CityKey[] = [];
+  for (const lot of lots) {
+    if (lot.availability.source === "tdx" && !out.includes(lot.city)) out.push(lot.city);
+  }
+  return out;
+}
+
 /** "10/19 10:26" in Taipei time, whatever the device's own zone. */
 export function taipeiTime(iso: string): string {
   const parts = new Intl.DateTimeFormat("en-GB", {

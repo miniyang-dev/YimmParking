@@ -14,6 +14,9 @@ class AvailabilityDTO(BaseModel):
     observed_at: datetime | None
     freshness: Literal["fresh", "stale", "expired", "unknown"]
     suspect: bool = Field(description="Reading exceeds the lot's listed capacity; treat as rough")
+    source: Literal["city", "tdx"] | None = Field(
+        description="city: the city's own feed; tdx: MOTC TDX, used while the city's has stopped"
+    )
 
 
 class TrendDTO(BaseModel):
@@ -218,6 +221,9 @@ class SourceStatusDTO(BaseModel):
     lots: int
     availability_as_of: datetime | None
     stale: bool = Field(description="No reading, or the newest is over an hour old")
+    availability_source: Literal["city", "tdx"] | None = Field(
+        description="Source of the city's newest reading; tdx means its own feed has stopped"
+    )
 
 
 class UsageDTO(BaseModel):

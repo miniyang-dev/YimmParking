@@ -212,7 +212,8 @@ class TestConvert:
     def test_live_writes_after_the_old_data_are_kept(self, tmp_path: Path) -> None:
         store = SqliteStore(old_database(tmp_path / "y.db"))
         store.db._conn.execute(
-            "INSERT INTO availability_latest VALUES ('taipei:a', 'taipei', 7, ?)",
+            "INSERT INTO availability_latest (lot_id, city, count, observed_at) "
+            "VALUES ('taipei:a', 'taipei', 7, ?)",
             ("2026-10-20T08:10:00+00:00",),
         )
         store.db._conn.commit()
