@@ -1776,10 +1776,22 @@ a {
     padding-bottom: 0;
   }
 
+  /* Scrollbars stay out of the sheet until the pointer (or keyboard focus) is in that column;
+     the gutter is kept either way, so nothing shifts when one appears. */
   .main,
   .desk__list,
   .desk__detail {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    scrollbar-gutter: stable;
+  }
+
+  .main:hover,
+  .main:focus-within,
+  .desk__list:hover,
+  .desk__list:focus-within,
+  .desk__detail:hover,
+  .desk__detail:focus-within {
     scrollbar-color: var(--rule-soft) transparent;
   }
 
