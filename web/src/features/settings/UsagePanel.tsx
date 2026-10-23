@@ -49,6 +49,9 @@ export function UsagePanel() {
       )}
 
       <p className="usage__note">{t("usage.note")}</p>
+      {health.data?.usage.some((item) => item.meter === "tdx") && (
+        <p className="usage__note">{t("usage.tdxNote")}</p>
+      )}
     </section>
   );
 }

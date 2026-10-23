@@ -649,9 +649,10 @@ export interface components {
         UsageDTO: {
             /**
              * Meter
+             * @description tdx is counted in thousandths of a TDX point (calls and data, TDX's formula)
              * @enum {string}
              */
-            meter: "geocoding" | "places_nearby" | "routes_elements";
+            meter: "geocoding" | "places_nearby" | "routes_elements" | "tdx";
             /** Period */
             period: string;
             /** Used */

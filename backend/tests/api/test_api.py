@@ -142,6 +142,7 @@ def build(
         search_curb=SearchNearbyCurb(
             curb_feeds or [], Clock(), configured=curb_feeds is not None  # type: ignore[arg-type]
         ),
+        tdx_budget=None,
     )
 
 
@@ -610,3 +611,23 @@ def test_each_count_says_which_feed_it_came_from(client: TestClient) -> None:
     health = client.get("/api/v1/health").json()
     by_city = {s["city"]: s["availability_source"] for s in health["sources"]}
     assert by_city == {"taipei": "city", "new_taipei": None}
+
+
+
+def test_health_reports_tdx_points_when_tdx_is_configured() -> None:
+    from yimmparking.application.tdx_budget import TdxBudget
+
+    container = build("k")
+    budget = TdxBudget(container.store, Clock(), limit_millipoints=2700)
+    budget.record(53 * 1024)  # one call of 53 KB
+    object.__setattr__(container, "tdx_budget", budget)
+    with TestClient(create_app(container=container)) as c:
+        usage = {u["meter"]: u for u in c.get("/api/v1/health").json()["usage"]}
+    container.close()
+    assert usage["tdx"]["limit"] == 2700
+    assert usage["tdx"]["used"] == 0  # 1/1500 + 53/153600 of a point rounds down to 0.000
+
+
+def test_health_leaves_tdx_out_when_it_is_not_configured(client: TestClient) -> None:
+    meters = [u["meter"] for u in client.get("/api/v1/health").json()["usage"]]
+    assert "tdx" not in meters

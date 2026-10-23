@@ -24,7 +24,9 @@ log = logging.getLogger(__name__)
 RADII_M = (300, 600)  # a driver will walk a few minutes from the curb, not more
 MAX_SEGMENTS = 8
 SEGMENTS_TTL = timedelta(hours=24)
-LIVE_TTL = timedelta(seconds=120)  # TDX refreshes every minute; this caps our calls per city
+# TDX's curb counts change every 5 minutes at the source (SrcUpdateInterval 300), and every call
+# is metered, so asking more often would only spend points.
+LIVE_TTL = timedelta(minutes=5)
 MAX_STALE = timedelta(minutes=30)
 SEGMENTS_MAX_STALE = timedelta(days=7)
 

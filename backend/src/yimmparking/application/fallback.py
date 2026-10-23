@@ -9,7 +9,7 @@ its source; as soon as the city's own feed moves again it is used again.
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from yimmparking.application.ports import AvailabilityFeed, Clock, ParkingFeed, SourceError
 from yimmparking.domain.model import AvailabilityBatch, ParkingLot
@@ -18,6 +18,9 @@ log = logging.getLogger(__name__)
 
 # The Taipei feed runs 4–7 minutes behind when healthy; past this it has stopped.
 PRIMARY_MAX_AGE = timedelta(minutes=30)
+# The backup is metered (TDX: 3 free points a month, about 0.001 per call): read it at most this
+# often, and serve its last answer in between. 30 minutes is about 1.5 points a month.
+BACKUP_INTERVAL = timedelta(minutes=30)
 
 
 class FallbackFeed:
@@ -29,12 +32,15 @@ class FallbackFeed:
         backup: AvailabilityFeed,
         clock: Clock,
         max_age: timedelta = PRIMARY_MAX_AGE,
+        backup_interval: timedelta = BACKUP_INTERVAL,
     ) -> None:
         if primary.city is not backup.city:
             raise ValueError("a fallback must be for the same city")
         self.city = primary.city
         self._primary, self._backup = primary, backup
         self._clock, self._max_age = clock, max_age
+        self._backup_interval = backup_interval
+        self._last_backup: tuple[datetime, AvailabilityBatch] | None = None
         self._on_backup = False
 
     def fetch_lots(self) -> list[ParkingLot]:
@@ -55,8 +61,12 @@ class FallbackFeed:
         except SourceError as exc:
             problem = f"own feed failed: {exc}"
 
+        now = self._clock.now()
+        if self._last_backup and now - self._last_backup[0] < self._backup_interval:
+            return self._last_backup[1]  # recorded already: adds nothing, costs nothing
         try:
             backup = self._backup.fetch_availability()
+            self._last_backup = (now, backup)
         except SourceError as exc:
             if primary is not None:
                 return primary  # old, but the newest there is; freshness rules will hide it

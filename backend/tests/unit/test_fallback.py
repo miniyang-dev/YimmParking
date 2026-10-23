@@ -179,3 +179,23 @@ def test_the_search_says_where_each_count_came_from() -> None:
     assert store.latest_source(City.TAIPEI) is AvailabilitySource.TDX
     assert store.latest_source(City.NEW_TAIPEI) is None
     store.close()
+
+
+def test_the_backup_is_read_at_most_once_per_interval() -> None:
+    class Ticking(Clock):
+        def __init__(self) -> None:
+            self.at = NOW
+
+        def now(self) -> datetime:
+            return self.at
+
+    clock = Ticking()
+    backup = Feed(TDX_NOW)
+    feed = FallbackFeed(Feed(CITY_STUCK), backup, clock, backup_interval=timedelta(minutes=30))
+    for minutes in (0, 2, 10, 28):
+        clock.at = NOW + timedelta(minutes=minutes)
+        assert feed.fetch_availability() is TDX_NOW
+    assert backup.calls == 1  # the last answer is served in between, at no cost
+    clock.at = NOW + timedelta(minutes=31)
+    feed.fetch_availability()
+    assert backup.calls == 2

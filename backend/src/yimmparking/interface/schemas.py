@@ -227,7 +227,9 @@ class SourceStatusDTO(BaseModel):
 
 
 class UsageDTO(BaseModel):
-    meter: Literal["geocoding", "places_nearby", "routes_elements"]
+    meter: Literal["geocoding", "places_nearby", "routes_elements", "tdx"] = Field(
+        description="tdx is counted in thousandths of a TDX point (calls and data, TDX's formula)"
+    )
     period: str
     used: int
     limit: int

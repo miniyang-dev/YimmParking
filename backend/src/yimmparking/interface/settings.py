@@ -55,6 +55,8 @@ class Settings:
     tdx_client_secret: str | None
     tdx_token_url: str | None
     tdx_api_base: str | None
+    tdx_monthly_points: float
+    tdx_fallback_minutes: int
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -100,4 +102,8 @@ class Settings:
             # Optional overrides for a local stand-in of TDX (UI testing).
             tdx_token_url=env.get("YIMM_TDX_TOKEN_URL") or None,
             tdx_api_base=env.get("YIMM_TDX_API_BASE") or None,
+            # TDX's free plan is 3 points a month, cut off at 105%; stop at 90% of it.
+            tdx_monthly_points=float(env.get("YIMM_TDX_MONTHLY_POINTS", "2.7")),
+            # How often Taipei's counts are read from TDX while the city's own feed has stopped.
+            tdx_fallback_minutes=int(env.get("YIMM_TDX_FALLBACK_MINUTES", "30")),
         )

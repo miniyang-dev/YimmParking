@@ -56,6 +56,7 @@ from yimmparking.application.search import (
 )
 from yimmparking.application.search_bikes import SearchNearbyBikes
 from yimmparking.application.search_curb import SearchNearbyCurb
+from yimmparking.application.tdx_budget import TdxBudget
 from yimmparking.domain.model import City
 from yimmparking.interface.settings import Settings
 
@@ -80,6 +81,7 @@ class Container:
     feed_watch: FeedWatch
     insights: LotInsights
     search_curb: SearchNearbyCurb
+    tdx_budget: TdxBudget | None
 
     @property
     def geocoder_configured(self) -> bool:
@@ -124,10 +126,12 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
     clock = SystemClock()
     store = SqliteStore(settings.db_path)
 
+    tdx_budget = TdxBudget(store, clock, round(settings.tdx_monthly_points * 1000))
     tdx = TdxClient(
         http,
         settings.tdx_client_id,
         settings.tdx_client_secret,
+        budget=tdx_budget,
         token_url=settings.tdx_token_url or TDX_TOKEN_URL,
         api_base=settings.tdx_api_base or TDX_API_BASE,
     )
@@ -135,7 +139,12 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
     # TDX's off-street data (same car park ids) while it does. TDX has no New Taipei equivalent.
     taipei: ParkingFeed = TaipeiFeed(http)
     if tdx.configured:
-        taipei = FallbackFeed(taipei, TdxOffStreetAvailability(tdx, City.TAIPEI), clock)
+        taipei = FallbackFeed(
+            taipei,
+            TdxOffStreetAvailability(tdx, City.TAIPEI),
+            clock,
+            backup_interval=timedelta(minutes=settings.tdx_fallback_minutes),
+        )
     feeds: list[ParkingFeed] = [taipei, NewTaipeiFeed(http, now=clock.now)]
     usage = UsageGate(
         store,
@@ -214,4 +223,5 @@ def build_container(settings: Settings, *, http: httpx.Client | None = None) -> 
         feed_watch=FeedWatch(store, clock, alerter),
         insights=LotInsights(store, clock),
         search_curb=curb,
+        tdx_budget=tdx_budget if tdx.configured else None,
     )

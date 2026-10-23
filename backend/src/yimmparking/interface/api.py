@@ -299,6 +299,15 @@ def create_app(container: Container | None = None, settings: Settings | None = N
             )
             for meter in ct.usage.meters
         ]
+        if ct.tdx_budget is not None:
+            usage.append(
+                UsageDTO(
+                    meter="tdx",
+                    period=ct.tdx_budget.period,
+                    used=ct.tdx_budget.used_millipoints(),
+                    limit=ct.tdx_budget.limit_millipoints,
+                )
+            )
         return HealthResponse(
             status="ok" if ok else "degraded",
             geocoder_configured=ct.geocoder_configured,

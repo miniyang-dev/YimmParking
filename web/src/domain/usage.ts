@@ -8,6 +8,7 @@ export const USAGE_LABEL: Record<string, StringKey> = {
   geocoding: "usage.address",
   places_nearby: "usage.food",
   routes_elements: "usage.walking",
+  tdx: "usage.tdx",
 };
 
 /**

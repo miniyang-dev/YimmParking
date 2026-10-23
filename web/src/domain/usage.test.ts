@@ -12,5 +12,6 @@ describe("usage", () => {
   it("labels meters by what they do, never by the provider's product name", () => {
     expect(Object.values(USAGE_LABEL).every((key) => key.startsWith("usage."))).toBe(true);
     expect(USAGE_LABEL["unknown_meter"]).toBeUndefined();
+    expect(USAGE_LABEL["tdx"]).toBe("usage.tdx");
   });
 });

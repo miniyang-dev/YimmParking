@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from yimmparking.application.ports import CurbUnconfigured, SourceError
+from yimmparking.application.ports import CallBudget, CurbUnconfigured, SourceError
 
 TOKEN_URL = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
 API_BASE = "https://tdx.transportdata.tw/api/basic"
@@ -39,8 +39,10 @@ class TdxClient:
         token_url: str = TOKEN_URL,
         api_base: str = API_BASE,
         monotonic: Callable[[], float] = time.monotonic,
+        budget: CallBudget | None = None,
     ) -> None:
         self._http = http
+        self._budget = budget
         self._id = client_id
         self._secret = client_secret
         self._token_url = token_url
@@ -100,6 +102,8 @@ class TdxClient:
                 "$top": PAGE_SIZE,
                 "$skip": page * PAGE_SIZE,
             }
+            if self._budget is not None:
+                self._budget.check()  # TDX bills every call: never past the monthly ceiling
             try:
                 response = self._http.get(
                     url,
@@ -109,6 +113,10 @@ class TdxClient:
                         "Accept-Encoding": "gzip",
                     },
                 )
+                if self._budget is not None:
+                    # Bytes on the wire (compressed, which is what TDX bills); when the transport
+                    # did not count them, the body size, which can only over-count.
+                    self._budget.record(response.num_bytes_downloaded or len(response.content))
                 if response.status_code == 401:
                     # The token was revoked or expired early: drop it so the next call renews.
                     with self._lock:

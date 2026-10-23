@@ -130,7 +130,8 @@ the endpoint answers 503 and the client hides the section.
 
 - Token: OAuth client credentials, cached until shortly before `expires_in`; a failed token request
   fails fast for a minute instead of each city waiting out a timeout.
-- Segments are read once a day, live counts at most every 2 minutes per city; a failed read is
+- Segments are read once a day, live counts at most every 5 minutes per city (TDX refreshes them
+  every 5); a failed read is
   retried after 2 minutes, and served from the last copy meanwhile (up to 30 minutes for counts).
 - Counts: the car-space reading (`SpaceType` 1) when given, else the all-types total, labelled as such.
   `-1` is "unknown", never zero. Distance is straight-line to the segment's marker point.
@@ -151,7 +152,20 @@ same `TPE…` car park ids) otherwise; the city feed is used again as soon as it
 reading keeps its source (`availability_latest.source`, migration v6); the API returns it per lot
 and `/api/v1/health` per city (`availability_source`), and the web client says when TDX is in use.
 TDX publishes no New Taipei equivalent. A TDX row more than 30 minutes behind the newest row is
-treated as no data.
+treated as no data. While the city feed is down TDX is read at most every 30 minutes
+(`YIMM_TDX_FALLBACK_MINUTES`), so Taipei counts are up to that old.
+
+## TDX points budget
+
+TDX bills basic services in points, calls and transfer added together: 1 point per 1,500 calls plus
+1 point per 150 MB (as transferred, gzip). A free (基礎) member gets 3 points a month; TDX emails at
+80% and suspends the account at 105% until the next month. Every TDX call (not the token request) is
+counted in `api_usage` (`tdx_calls`, `tdx_kb`); at `YIMM_TDX_MONTHLY_POINTS` (default 2.7) calls stop
+for the rest of the month (`TdxBudgetSpent`, so curb and the Taipei fallback behave as unavailable).
+`/api/v1/health` reports it as meter `tdx` in thousandths of a point, shown in the web client's
+monthly usage. Measured wire sizes (2026-10-23): Taipei off-street counts 53 KB; curb counts 60 KB
+(Taipei) / 73 KB (New Taipei); curb segments 372 KB / 26 KB. The Taipei fallback at every 30 minutes
+is about 1.5 points a month; at the original every 2 minutes it would have used 3 points in four days.
 
 ## Data caveats
 

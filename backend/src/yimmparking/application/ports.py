@@ -98,6 +98,16 @@ class BikeFeed(Protocol):
     def fetch_stations(self) -> list[BikeStation]: ...
 
 
+class CallBudget(Protocol):
+    """Counts calls to a metered service and refuses them past a ceiling."""
+
+    def check(self) -> None:
+        """Raise (a SourceError) when no more calls may be made this period."""
+
+    def record(self, wire_bytes: int) -> None:
+        """Count one answered call and the bytes it transferred."""
+
+
 class CurbFeed(Protocol):
     """One city's on-street parking: segments (rarely change) and live free spaces."""
 
