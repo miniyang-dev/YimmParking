@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ageMinutes, spaceState } from "./availability";
-import { compassLabel } from "./compass";
+import { bearingDeg, compassLabel } from "./compass";
 import { formatDistance } from "./distance";
 import { toSections } from "./grouping";
 import { filterFood, ratingFloors } from "./food";
@@ -62,6 +62,16 @@ describe("compassLabel", () => {
   });
   it("has English labels", () => {
     expect(compassLabel(135, "en")).toBe("SE");
+  });
+});
+
+describe("bearingDeg", () => {
+  const origin = { lat: 25.0375, lng: 121.5637 };
+  it("points the way from the search to a place", () => {
+    expect(bearingDeg(origin, { lat: 25.0475, lng: 121.5637 })).toBeCloseTo(0, 0);
+    expect(bearingDeg(origin, { lat: 25.0375, lng: 121.5737 })).toBeCloseTo(90, 0);
+    expect(bearingDeg(origin, { lat: 25.0275, lng: 121.5637 })).toBeCloseTo(180, 0);
+    expect(compassLabel(bearingDeg(origin, { lat: 25.03, lng: 121.556 }), "zh")).toBe("西南");
   });
 });
 

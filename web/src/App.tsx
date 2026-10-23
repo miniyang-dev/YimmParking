@@ -5,6 +5,7 @@ import { ageMinutes } from "./domain/availability";
 import { remember, type SavedPlace } from "./domain/places";
 import type { Lot } from "./domain/types";
 import { serializePrefs } from "./domain/vendors";
+import { OpenedCurb } from "./features/detail/CurbDetail";
 import { LotDetail } from "./features/detail/LotDetail";
 import { Legend, ResultSheet, SheetSkeleton } from "./features/results/ResultSheet";
 import { CurbSection } from "./features/results/CurbSection";
@@ -65,12 +66,13 @@ export function App() {
   const selected = selectedIndex >= 0 ? (lots[selectedIndex] as Lot) : null;
   const wide = useWide();
   // On a wide screen the first control is shown until another is opened (the URL stays as is).
-  const shown = selected ?? (wide && !route.lot ? (lots[0] ?? null) : null);
+  const shown = selected ?? (wide && !route.lot && !route.curb ? (lots[0] ?? null) : null);
+  const curbOpen = data && route.curb && !selected ? route.curb : null;
   const detailPane = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     detailPane.current?.scrollTo(0, 0);
-  }, [shown?.id]);
+  }, [shown?.id, curbOpen]);
 
   const newestObservation = useMemo(() => {
     const times = lots
@@ -90,7 +92,7 @@ export function App() {
   function searchFrom(where: { label: string; lat: number; lng: number }, shownAs = where.label) {
     rememberNextAddress.current = false;
     updatePlaces((list) => remember(list, where, Date.now()));
-    setRoute({ q: null, lat: where.lat, lng: where.lng, label: shownAs, lot: null });
+    setRoute({ q: null, lat: where.lat, lng: where.lng, label: shownAs, lot: null, curb: null });
   }
 
   function pickPlace(place: SavedPlace) {
@@ -100,7 +102,7 @@ export function App() {
   const age = ageMinutes(newestObservation, now);
   const asOfLabel = age === null ? null : age === 0 ? t("scale.asofNow") : t("scale.asof", { min: age });
   const radiusLabel = data ? t("scale.within", { radius: formatDistance(data.meta.radius_m) }) : null;
-  const showScale = !settingsOpen && (wide || !selected);
+  const showScale = !settingsOpen && (wide || (!selected && !curbOpen));
 
   function locate() {
     if (!navigator.geolocation) {
@@ -119,6 +121,7 @@ export function App() {
           lng: pos.coords.longitude,
           label: t("search.located"),
           lot: null,
+          curb: null,
         });
       },
       () => {
@@ -189,10 +192,15 @@ export function App() {
             poolSize={data.meta.pool_size}
             walking={data.meta.walking}
             activeId={wide ? shown?.id : undefined}
-            onOpen={(lot) => setRoute({ lot: lot.id })}
+            onOpen={(lot) => setRoute({ lot: lot.id, curb: null })}
           />
         )}
-        <CurbSection origin={{ lat: data.origin.lat, lng: data.origin.lng }} now={now} />
+        <CurbSection
+          origin={{ lat: data.origin.lat, lng: data.origin.lng }}
+          now={now}
+          activeId={wide ? (route.curb ?? undefined) : undefined}
+          onOpen={(segment) => setRoute({ curb: segment.id, lot: null })}
+        />
       </>
     ) : (
       <section className="empty">
@@ -202,7 +210,16 @@ export function App() {
       </section>
     );
 
-  const detail = shown ? (
+  const detail = curbOpen && data ? (
+    <OpenedCurb
+      id={curbOpen}
+      now={now}
+      origin={{ lat: data.origin.lat, lng: data.origin.lng }}
+      originLabel={initialText || t("search.origin")}
+      onBack={wide ? undefined : () => setRoute({ curb: null })}
+      onClose={() => setRoute({ curb: null })}
+    />
+  ) : shown ? (
     <LotDetail
       lot={shown}
       number={lots.indexOf(shown) + 1}
@@ -228,14 +245,14 @@ export function App() {
         radiusLabel={showScale ? radiusLabel : null}
         asOfLabel={showScale ? asOfLabel : null}
         locating={locating}
-        compact={settingsOpen || (!wide && selected !== null)}
+        compact={settingsOpen || (!wide && (selected !== null || curbOpen !== null))}
         theme={theme}
         onTheme={cycleTheme}
         onSettings={() => setRoute({ view: "settings" })}
         onSubmit={(text) => {
           setLocateError(false);
           rememberNextAddress.current = true;
-          setRoute({ q: text, lat: null, lng: null, label: null, lot: null });
+          setRoute({ q: text, lat: null, lng: null, label: null, lot: null, curb: null });
         }}
         onLocate={locate}
         onMode={(mode) => setRoute({ mode }, { replace: true })}

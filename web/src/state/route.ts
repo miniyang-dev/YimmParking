@@ -9,6 +9,8 @@ export interface Route {
   label: string | null;
   mode: SortMode;
   lot: string | null;
+  /** An opened street-parking segment; never set together with `lot`. */
+  curb: string | null;
   view: "settings" | null;
 }
 
@@ -30,6 +32,7 @@ export function parseRoute(search: string): Route {
     label: p.get("label"),
     mode: p.get("mode") === "distance" ? "distance" : "tiered",
     lot: p.get("lot"),
+    curb: p.get("lot") ? null : p.get("curb"),
     view: p.get("view") === "settings" ? "settings" : null,
   };
 }
@@ -45,6 +48,7 @@ export function serializeRoute(route: Route): string {
   }
   if (route.mode === "distance") p.set("mode", "distance");
   if (route.lot) p.set("lot", route.lot);
+  else if (route.curb) p.set("curb", route.curb);
   if (route.view) p.set("view", route.view);
   const text = p.toString();
   return text ? `?${text}` : window.location.pathname;

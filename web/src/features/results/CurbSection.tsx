@@ -2,13 +2,12 @@ import { ApiError } from "../../api/client";
 import { CITY_LABEL } from "../../domain/cities";
 import { curbCell, curbNotes } from "../../domain/curb";
 import { formatDistance } from "../../domain/distance";
-import { directionsUrl, type Coordinate } from "../../domain/maps";
+import type { Coordinate } from "../../domain/maps";
 import type { CurbSegment } from "../../domain/types";
 import { useI18n } from "../../i18n";
 import { useCurb } from "../../state/queries";
-import { followRowLink } from "../../ui/rowLink";
 
-function CurbCountCell({ segment }: { segment: CurbSegment }) {
+export function CurbCountCell({ segment }: { segment: CurbSegment }) {
   const { t } = useI18n();
   const cell = curbCell(segment);
   const total = segment.total !== null ? t("curb.of", { n: segment.total }) : null;
@@ -40,11 +39,20 @@ function CurbCountCell({ segment }: { segment: CurbSegment }) {
   }
 }
 
+interface Props {
+  origin: Coordinate;
+  now: Date;
+  /** The segment shown in the detail beside the sheet (wide screens). */
+  activeId?: string;
+  onOpen: (segment: CurbSegment) => void;
+}
+
 /**
- * Metered street segments near the search origin, below the lot list. Hidden entirely while the
- * server has no TDX credentials: an unconfigured source is not something a driver can act on.
+ * Metered street segments near the search origin, below the lot list; a row opens like a lot.
+ * Hidden entirely while the server has no TDX credentials: an unconfigured source is not
+ * something a driver can act on.
  */
-export function CurbSection({ origin, now }: { origin: Coordinate; now: Date }) {
+export function CurbSection({ origin, now, activeId, onOpen }: Props) {
   const { t } = useI18n();
   const query = useCurb(origin.lat, origin.lng);
 
@@ -95,18 +103,17 @@ export function CurbSection({ origin, now }: { origin: Coordinate; now: Date }) 
               {results.map((segment, i) => {
                 const notes = curbNotes(segment, now);
                 return (
-                  <tr key={segment.id} className="lots__row" onClick={followRowLink}>
+                  <tr
+                    key={segment.id}
+                    className={segment.id === activeId ? "lots__row lots__row--active" : "lots__row"}
+                    aria-current={segment.id === activeId ? "true" : undefined}
+                    onClick={() => onOpen(segment)}
+                  >
                     <td className="lots__no">{String.fromCharCode(97 + (i % 26))}</td>
                     <td className="lots__main">
-                      <a
-                        className="lots__open"
-                        href={directionsUrl(origin, segment, { travelMode: "driving" })}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
+                      <button type="button" className="lots__open">
                         {segment.name}
-                        <span className="sr-only"> {"—"} {t("curb.go", { name: segment.name })}</span>
-                      </a>
+                      </button>
                       <div className="lots__meta">
                         <span>{t("walk.straight", { d: formatDistance(segment.distance_m) })}</span>
                         {segment.description && segment.description !== segment.name && (

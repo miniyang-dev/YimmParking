@@ -10,7 +10,6 @@ import {
   type FoodSort,
 } from "../../domain/food";
 import { directionsUrl, type Coordinate } from "../../domain/maps";
-import type { Lot } from "../../domain/types";
 import { walkMinutes } from "../../domain/walk";
 import { useI18n } from "../../i18n";
 import type { StringKey } from "../../i18n/strings";
@@ -62,7 +61,8 @@ export function FoodSection({
   origin,
   originLabel,
 }: {
-  lot: Lot;
+  /** What the food is near: a lot, or a street-parking segment. */
+  lot: Coordinate & { id: string };
   origin: Coordinate;
   originLabel: string;
 }) {
