@@ -145,8 +145,8 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
         <TypicalDay key={`typical-${lot.id}`} lotId={lot.id} now={now} />
       </div>
 
-      {/* Wide detail (app.css "desktop"): main and tail on the left, this beside them. Narrow: in
-          reading order, the wrappers add nothing. */}
+      {/* Wide detail (app.css "desktop"): bikes join main and tail on the left, food takes the
+          right. Narrow: in reading order, the wrappers add nothing. */}
       <div className="detail__side">
         <BikeSection key={`bikes-${lot.id}`} lot={lot} now={now} />
         <FoodSection key={lot.id} lot={lot} origin={origin} originLabel={originLabel} />

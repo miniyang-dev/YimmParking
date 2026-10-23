@@ -1858,14 +1858,17 @@ a {
   }
 }
 
-/* The opened lot, when its column is wide enough: what to do here on the left (spaces, the
-   way there, the usual day, fee and facts), what is around it on the right (bikes, food). The
-   second row takes the slack so a long food list never opens gaps on the left. */
+/* The opened lot, when its column is wide enough: the lot itself on the left (spaces, the way
+   there, the usual day, fee and facts, then YouBike), food on the right. Food is the long list,
+   so it gets a column to itself and the two run to similar lengths; the last left row takes the
+   slack so a long food list never opens gaps between the left blocks. */
 @container (min-width: 720px) {
   .detail {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
+    /* One rule down the middle, however long either side runs. */
+    background: linear-gradient(var(--rule), var(--rule)) 50% 0 / 1.5px 100% no-repeat;
   }
 
   .detail__main {
@@ -1876,16 +1879,22 @@ a {
   .detail__tail {
     grid-column: 1;
     grid-row: 2;
-    align-self: start;
   }
 
   .detail__side {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    border-left: 1.5px solid var(--rule);
+    display: contents;
   }
 
-  .detail__side > :first-child {
+  .detail__side > .bikes {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: start;
+  }
+
+  .detail__side > .food {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: start;
     margin-top: 0;
   }
 }
