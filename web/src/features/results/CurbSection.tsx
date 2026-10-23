@@ -6,6 +6,7 @@ import { directionsUrl, type Coordinate } from "../../domain/maps";
 import type { CurbSegment } from "../../domain/types";
 import { useI18n } from "../../i18n";
 import { useCurb } from "../../state/queries";
+import { followRowLink } from "../../ui/rowLink";
 
 function CurbCountCell({ segment }: { segment: CurbSegment }) {
   const { t } = useI18n();
@@ -94,7 +95,7 @@ export function CurbSection({ origin, now }: { origin: Coordinate; now: Date }) 
               {results.map((segment, i) => {
                 const notes = curbNotes(segment, now);
                 return (
-                  <tr key={segment.id} className="lots__row">
+                  <tr key={segment.id} className="lots__row" onClick={followRowLink}>
                     <td className="lots__no">{String.fromCharCode(97 + (i % 26))}</td>
                     <td className="lots__main">
                       <a
