@@ -307,6 +307,12 @@ class TestResolveAddress:
         assert geocoder.calls == 1
         assert first[0].location == second[0].location
 
+    def test_a_cached_answer_is_labelled_with_what_was_typed(self, store: SqliteStore) -> None:
+        resolver = ResolveAddress(self.CountingGeocoder(), store, FixedClock(self.now))
+        resolver.execute("台北市 信義區 市府路1號")
+        [again] = resolver.execute("台北市 信義區 市府路1號")
+        assert again.formatted_address == "台北市 信義區 市府路1號"  # not "v2:台北市信義區市府路1號"
+
     def test_answers_cached_before_the_country_fix_are_not_read(self, store: SqliteStore) -> None:
         old = GeocodeCandidate("台灣", GeoPoint(23.69781, 120.960515), "country")
         store.put_geocode(normalize_address("qwxzjkv"), [old], self.now, GEOCODE_CACHE_TTL)

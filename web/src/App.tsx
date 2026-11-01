@@ -244,7 +244,13 @@ export function App() {
         mode={route.mode}
         radiusLabel={showScale ? radiusLabel : null}
         asOfLabel={showScale ? asOfLabel : null}
-        resolvedLabel={showScale && route.q !== null ? (data?.origin.label ?? null) : null}
+        resolvedLabel={
+          // Shown only when Google's reading of the text differs from the text itself (a cached
+          // answer carries the typed text back, so there is nothing new to say).
+          showScale && route.q !== null && data?.origin.label && data.origin.label !== route.q
+            ? data.origin.label
+            : null
+        }
         locating={locating}
         compact={settingsOpen || (!wide && (selected !== null || curbOpen !== null))}
         theme={theme}

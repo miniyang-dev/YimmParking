@@ -163,7 +163,9 @@ class ResolveAddress:
         now = self._clock.now()
         cached = self._cache.get_geocode(key, now)
         if cached is not None:
-            return cached
+            # Google's own wording of the address is not kept (its terms allow only coordinates),
+            # so a cached answer carries what the person typed, not the cache key.
+            return [replace(c, formatted_address=query.strip()) for c in cached]
         candidates = self._geocoder.geocode(query.strip())
         if candidates:
             self._cache.put_geocode(key, candidates, now, GEOCODE_CACHE_TTL)
