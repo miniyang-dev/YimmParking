@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type PointerEvent } from "react";
 import { clockOf, niceMax, taipeiSlot } from "../../domain/insight";
 import { useI18n } from "../../i18n";
 import type { StringKey } from "../../i18n/strings";
@@ -58,6 +58,15 @@ export function TypicalDay({ lotId, now }: { lotId: string; now: Date }) {
             })
           : t("typical.noValue", { time: clockOf(focused?.minute ?? 0) });
 
+      // The slot under the pointer, by position: a column is only ~7px wide on a phone, too thin
+      // to land on, so a tap anywhere along the chart (or a drag across it) picks the nearest.
+      function pickAt(event: PointerEvent<SVGSVGElement>) {
+        const box = event.currentTarget.getBoundingClientRect();
+        const x = ((event.clientX - box.left) / box.width) * W;
+        const index = Math.floor((x - PAD_LEFT) / slotW);
+        if (index >= 0 && index < data.slots.length) setPicked(index);
+      }
+
       body = (
         <>
           <svg
@@ -65,7 +74,12 @@ export function TypicalDay({ lotId, now }: { lotId: string; now: Date }) {
             viewBox={`0 0 ${W} ${H}`}
             role="img"
             aria-label={t("typical.title", { day })}
-            onPointerLeave={() => setPicked(null)}
+            onPointerDown={pickAt}
+            onPointerMove={pickAt}
+            // A finger lifted off the chart keeps what it picked; only a mouse moving away resets.
+            onPointerLeave={(event) => {
+              if (event.pointerType === "mouse") setPicked(null);
+            }}
           >
             <line x1={PAD_LEFT} x2={W} y1={PAD_TOP} y2={PAD_TOP} className="typical__grid" />
             <line x1={PAD_LEFT} x2={W} y1={baseline} y2={baseline} className="typical__base" />
@@ -94,16 +108,6 @@ export function TypicalDay({ lotId, now }: { lotId: string; now: Date }) {
                   {slot.median !== null && slot.median > 0 && (
                     <path d={column(x, barW, y(slot.median), baseline)} className={`typical__bar ${state}`} />
                   )}
-                  {/* The hit target is the whole column of the slot, not just the bar. */}
-                  <rect
-                    x={PAD_LEFT + i * slotW}
-                    y={0}
-                    width={slotW}
-                    height={baseline}
-                    fill="transparent"
-                    onPointerEnter={() => setPicked(i)}
-                    onClick={() => setPicked(i)}
-                  />
                 </g>
               );
             })}

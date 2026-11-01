@@ -14,6 +14,9 @@ from yimmparking.domain.model import GeocodeCandidate
 
 ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json"
 MAX_CANDIDATES = 5
+# With `components=country:TW`, text Google cannot place at all still comes back as the country
+# itself (a point in the middle of Taiwan), which looks like a found address. It is not one.
+NOT_AN_ADDRESS = frozenset({"country"})
 
 
 class GoogleGeocoder:
@@ -52,6 +55,8 @@ class GoogleGeocoder:
 
         candidates: list[GeocodeCandidate] = []
         for result in payload.get("results", [])[:MAX_CANDIDATES]:
+            if NOT_AN_ADDRESS.intersection(result.get("types") or ()):
+                continue
             loc = result.get("geometry", {}).get("location", {})
             try:
                 point = GeoPoint(float(loc["lat"]), float(loc["lng"]))

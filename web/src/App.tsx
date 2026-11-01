@@ -244,6 +244,7 @@ export function App() {
         mode={route.mode}
         radiusLabel={showScale ? radiusLabel : null}
         asOfLabel={showScale ? asOfLabel : null}
+        resolvedLabel={showScale && route.q !== null ? (data?.origin.label ?? null) : null}
         locating={locating}
         compact={settingsOpen || (!wide && (selected !== null || curbOpen !== null))}
         theme={theme}

@@ -10,6 +10,8 @@ import { Symbol } from "../../ui/Symbol";
 interface Props {
   /** The lot: distances are measured from it and every walking route starts at it. */
   lot: Coordinate;
+  /** What the stations are near: the headings and notes say "lot" or "segment" to match. */
+  anchor?: "lot" | "curb";
   now: Date;
 }
 
@@ -95,7 +97,7 @@ function GoIcon() {
 }
 
 /** YouBike stations near the opened lot; each row opens walking directions from the lot. */
-export function BikeSection({ lot, now }: Props) {
+export function BikeSection({ lot, anchor = "lot", now }: Props) {
   const { t } = useI18n();
   const query = useBikes(lot.lat, lot.lng);
 
@@ -185,7 +187,7 @@ export function BikeSection({ lot, now }: Props) {
                 <td className="lots__main">
                   <a className="lots__open bikes__name" href={href} target="_blank" rel="noreferrer">
                     {s.name}
-                    <span className="sr-only"> {"—"} {t("bikes.goLabel", { name: s.name })}</span>
+                    <span className="sr-only"> {"—"} {t(anchor === "curb" ? "bikes.goLabelCurb" : "bikes.goLabel", { name: s.name })}</span>
                   </a>
                   <div className="lots__meta">
                     <span>{t("walk.straight", { d: formatDistance(s.distance_m) })}</span>
@@ -205,7 +207,7 @@ export function BikeSection({ lot, now }: Props) {
           })}
         </tbody>
       </table>
-      <p className="attrib">{t("bikes.note")}</p>
+      <p className="attrib">{t(anchor === "curb" ? "bikes.noteCurb" : "bikes.note")}</p>
     </section>
   );
 }

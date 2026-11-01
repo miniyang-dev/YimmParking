@@ -56,13 +56,19 @@ const CATEGORY_LABEL: Record<FoodCategoryKey, StringKey> = {
   other: "food.category.other",
 };
 
+/** Places listed before "show all": enough to choose from; the rest are one tap away. */
+const PREVIEW = 8;
+
 export function FoodSection({
   lot,
+  anchor = "lot",
   origin,
   originLabel,
 }: {
   /** What the food is near: a lot, or a street-parking segment. */
   lot: Coordinate & { id: string };
+  /** Which of the two it is, so the heading says "from this lot" or "from this segment". */
+  anchor?: "lot" | "curb";
   origin: Coordinate;
   originLabel: string;
 }) {
@@ -74,6 +80,7 @@ export function FoodSection({
   const [categoryChoice, setCategoryChoice] = useState<FoodCategoryKey | null>(null);
   // Places the person has crossed out for today. The roulette never lands on these.
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
+  const [expanded, setExpanded] = useState(false);
 
   const all = query.data?.results;
   const applied = query.data?.min_rating ?? 0;
@@ -87,14 +94,24 @@ export function FoodSection({
     [all, category, floor, sort],
   );
 
+  // What is on screen: the first few places until "show all". The roulette and the row letters
+  // work on these rows only, so it never lands on a place that cannot be seen.
+  const visible = useMemo(
+    () => (expanded ? shown : shown.slice(0, PREVIEW)),
+    [shown, expanded],
+  );
+
   // The rows the roulette may land on: everything on screen that is not crossed out.
   const eligible = useMemo(
-    () => shown.flatMap((place, row) => (excluded.has(place.id) ? [] : [row])),
-    [shown, excluded],
+    () => visible.flatMap((place, row) => (excluded.has(place.id) ? [] : [row])),
+    [visible, excluded],
   );
   // Changing the filter, sort or lot cancels a running roulette.
-  const spin = useSpin(eligible, `${lot.id}|${category ?? "all"}|${floor}|${sort}|${shown.length}`);
-  const pickedPlace = spin.view.picked !== null ? shown[spin.view.picked] : undefined;
+  const spin = useSpin(
+    eligible,
+    `${lot.id}|${category ?? "all"}|${floor}|${sort}|${visible.length}`,
+  );
+  const pickedPlace = spin.view.picked !== null ? visible[spin.view.picked] : undefined;
 
   function rejectPicked() {
     if (spin.view.picked === null || pickedPlace === undefined) return;
@@ -248,7 +265,7 @@ export function FoodSection({
         ) : (
           <table className="lots lots--food">
             <tbody>
-              {shown.map((place, i) => {
+              {visible.map((place, i) => {
                 const state =
                   spin.view.picked === i
                     ? "picked"
@@ -313,6 +330,11 @@ export function FoodSection({
             </tbody>
           </table>
         )}
+        {shown.length > visible.length && (
+          <button type="button" className="food__more" onClick={() => setExpanded(true)}>
+            {t("food.showAll", { n: shown.length })}
+          </button>
+        )}
       </>
     );
   }
@@ -321,7 +343,7 @@ export function FoodSection({
     <section className="food" aria-labelledby="food-title">
       <h2 id="food-title" className="band band--other">
         <span>{t("food.title")}</span>
-        <small>{t("food.from")}</small>
+        <small>{t(anchor === "curb" ? "food.fromCurb" : "food.from")}</small>
       </h2>
       {body}
       <p className="attrib">

@@ -1,6 +1,6 @@
 import { ApiError } from "../../api/client";
 import { CITY_LABEL } from "../../domain/cities";
-import { curbCell, curbNotes } from "../../domain/curb";
+import { curbCell, curbNotes, segmentSpan } from "../../domain/curb";
 import { formatDistance } from "../../domain/distance";
 import type { Coordinate } from "../../domain/maps";
 import type { CurbSegment } from "../../domain/types";
@@ -116,9 +116,7 @@ export function CurbSection({ origin, now, activeId, onOpen }: Props) {
                       </button>
                       <div className="lots__meta">
                         <span>{t("walk.straight", { d: formatDistance(segment.distance_m) })}</span>
-                        {segment.description && segment.description !== segment.name && (
-                          <span>{segment.description}</span>
-                        )}
+                        {segmentSpan(segment) && <span>{segmentSpan(segment)}</span>}
                         {notes.map((note) => (
                           <span key={note.key} className="lots__hours">
                             {t(note.key, note.vars)}

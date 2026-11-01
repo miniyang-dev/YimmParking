@@ -11,6 +11,19 @@ export function curbCell(segment: CurbSegment): CurbCell {
   return { kind: "count", available: segment.available };
 }
 
+/**
+ * What a segment's description adds to its name: TDX writes "逸仙路32巷(逸仙路到忠孝東路四段554巷)",
+ * the name followed by the stretch it covers. Null when it adds nothing.
+ */
+export function segmentSpan(segment: CurbSegment): string | null {
+  const description = segment.description.trim();
+  if (!description || description === segment.name) return null;
+  const rest = description.startsWith(segment.name)
+    ? description.slice(segment.name.length).replace(/^[\s(（]+|[\s)）]+$/g, "")
+    : description;
+  return rest && rest !== segment.name ? rest : null;
+}
+
 /** A count older than this says how old it is (New Taipei's often runs 15–20 minutes behind). */
 export const CURB_OLD_AFTER_MIN = 15;
 

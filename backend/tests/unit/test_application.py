@@ -307,11 +307,18 @@ class TestResolveAddress:
         assert geocoder.calls == 1
         assert first[0].location == second[0].location
 
+    def test_answers_cached_before_the_country_fix_are_not_read(self, store: SqliteStore) -> None:
+        old = GeocodeCandidate("台灣", GeoPoint(23.69781, 120.960515), "country")
+        store.put_geocode(normalize_address("qwxzjkv"), [old], self.now, GEOCODE_CACHE_TTL)
+        geocoder = self.CountingGeocoder()
+        ResolveAddress(geocoder, store, FixedClock(self.now)).execute("qwxzjkv")
+        assert geocoder.calls == 1  # asked again, not served the old middle-of-Taiwan answer
+
     def test_cache_expires_and_is_actually_deleted(self, store: SqliteStore) -> None:
         geocoder = self.CountingGeocoder()
         ResolveAddress(geocoder, store, FixedClock(self.now)).execute("市府路1號")
         later = self.now + GEOCODE_CACHE_TTL + timedelta(seconds=1)
-        assert store.get_geocode(normalize_address("市府路1號"), later) is None
+        assert store.get_geocode("v2:" + normalize_address("市府路1號"), later) is None
         assert store.purge_expired_geocodes(later) == 1
         ResolveAddress(geocoder, store, FixedClock(later)).execute("市府路1號")
         assert geocoder.calls == 2
@@ -361,6 +368,46 @@ class TestGoogleGeocoder:
             "k",
         )
         assert geocoder.geocode("???") == []
+
+    def test_text_google_cannot_place_is_not_the_middle_of_taiwan(
+        self, make_client: ClientFactory
+    ) -> None:
+        # What Google really answers for a nonsense query with components=country:TW.
+        body = {
+            "status": "OK",
+            "results": [
+                {
+                    "formatted_address": "台灣",
+                    "place_id": "ChIJ-country",
+                    "types": ["country", "political"],
+                    "geometry": {"location": {"lat": 23.69781, "lng": 120.960515}},
+                }
+            ],
+        }
+        geocoder = GoogleGeocoder(make_client(lambda r: httpx.Response(200, json=body)), "k")
+        assert geocoder.geocode("qwxzjkv") == []
+
+    def test_a_country_result_does_not_hide_a_real_address(
+        self, make_client: ClientFactory
+    ) -> None:
+        body = {
+            "status": "OK",
+            "results": [
+                {
+                    "formatted_address": "台灣",
+                    "types": ["country", "political"],
+                    "geometry": {"location": {"lat": 23.7, "lng": 121.0}},
+                },
+                {
+                    "formatted_address": "110台北市信義區市府路1號",
+                    "types": ["street_address"],
+                    "geometry": {"location": {"lat": 25.0375, "lng": 121.5637}},
+                },
+            ],
+        }
+        geocoder = GoogleGeocoder(make_client(lambda r: httpx.Response(200, json=body)), "k")
+        [c] = geocoder.geocode("市府路1號")
+        assert c.formatted_address == "110台北市信義區市府路1號"
 
     def test_denied_key_is_an_error_not_zero_results(self, make_client: ClientFactory) -> None:
         body = {"status": "REQUEST_DENIED", "error_message": "key invalid", "results": []}

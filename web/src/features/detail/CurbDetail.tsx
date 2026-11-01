@@ -1,5 +1,6 @@
 import { bearingDeg, compassLabel } from "../../domain/compass";
-import { curbNotes } from "../../domain/curb";
+import { ageMinutes } from "../../domain/availability";
+import { curbCell, curbNotes, segmentSpan } from "../../domain/curb";
 import { formatDistance } from "../../domain/distance";
 import { directionsUrl, type Coordinate } from "../../domain/maps";
 import type { CurbSegment } from "../../domain/types";
@@ -26,7 +27,11 @@ interface Props {
 export function CurbDetail({ segment, letter, now, origin, originLabel, onBack }: Props) {
   const { t, locale } = useI18n();
   const bearing = bearingDeg(origin, segment);
-  const notes = curbNotes(segment, now);
+  // The count's age is said once, below; the notes keep the rest (almost full, outside hours…).
+  const notes = curbNotes(segment, now).filter((note) => note.key !== "curb.age");
+  const age = ageMinutes(segment.observed_at, now);
+  const noCount = curbCell(segment).kind === "none";
+  const span = segmentSpan(segment);
 
   return (
     <article className="detail">
@@ -62,6 +67,8 @@ export function CurbDetail({ segment, letter, now, origin, originLabel, onBack }
         <div className="spaces">
           <CurbCountCell segment={segment} />
           <p className="spaces__text">
+            {age !== null && !noCount ? t("spaces.ago", { min: age }) : ""}
+            {noCount && <span className="spaces__warn">{t("curb.noLive")}</span>}
             {notes.map((note) => (
               <span key={note.key} className="spaces__warn">
                 {t(note.key, note.vars)}
@@ -84,21 +91,27 @@ export function CurbDetail({ segment, letter, now, origin, originLabel, onBack }
         <p className="go__from">{t("detail.navFrom", { origin: originLabel })}</p>
       </div>
 
-      <div className="detail__side">
-        <BikeSection key={`bikes-${segment.id}`} lot={segment} now={now} />
-        <FoodSection key={segment.id} lot={segment} origin={origin} originLabel={originLabel} />
-      </div>
-
       <div className="detail__tail">
-        {segment.description && segment.description !== segment.name && (
+        {span && (
           <dl className="facts">
             <div className="facts__row">
               <dt>{t("curb.segment")}</dt>
-              <dd>{segment.description}</dd>
+              <dd>{span}</dd>
             </div>
           </dl>
         )}
         <p className="attrib">{t("curb.note")}</p>
+      </div>
+
+      <div className="detail__side">
+        <BikeSection key={`bikes-${segment.id}`} lot={segment} anchor="curb" now={now} />
+        <FoodSection
+          key={segment.id}
+          lot={segment}
+          anchor="curb"
+          origin={origin}
+          originLabel={originLabel}
+        />
       </div>
     </article>
   );

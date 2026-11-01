@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { curbCell, curbNotes } from "./curb";
+import { curbCell, curbNotes, segmentSpan } from "./curb";
 import type { CurbSegment } from "./types";
 
 const seg = (over: Partial<CurbSegment>): CurbSegment => ({
@@ -60,5 +60,22 @@ describe("curbNotes", () => {
     expect(curbNotes(seg({ observed_at: "2026-10-23T04:42:00Z" }), NOW)).toEqual([
       { key: "curb.age", vars: { min: 18 } },
     ]);
+  });
+});
+
+describe("segmentSpan", () => {
+  it("keeps only the stretch the description adds to the name", () => {
+    const description = "逸仙路32巷(逸仙路到忠孝東路四段554巷)";
+    expect(segmentSpan(seg({ name: "逸仙路32巷", description }))).toBe("逸仙路到忠孝東路四段554巷");
+  });
+
+  it("says nothing when the description is the name or empty", () => {
+    expect(segmentSpan(seg({ name: "松高路", description: "松高路" }))).toBeNull();
+    expect(segmentSpan(seg({ name: "松高路", description: "" }))).toBeNull();
+    expect(segmentSpan(seg({ name: "松高路", description: "松高路()" }))).toBeNull();
+  });
+
+  it("keeps a description that does not start with the name", () => {
+    expect(segmentSpan(seg({ name: "松高路", description: "松智路至松仁路" }))).toBe("松智路至松仁路");
   });
 });

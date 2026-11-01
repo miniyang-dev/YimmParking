@@ -154,9 +154,12 @@ class ResolveAddress:
         self._clock = clock
 
     def execute(self, query: str) -> list[GeocodeCandidate]:
-        key = normalize_address(query)
-        if not key:
+        text = normalize_address(query)
+        if not text:
             return []
+        # Version 2: answers cached before country-level results were refused (a nonsense query
+        # cached as the middle of Taiwan) are never read again; they simply expire.
+        key = f"v2:{text}"
         now = self._clock.now()
         cached = self._cache.get_geocode(key, now)
         if cached is not None:

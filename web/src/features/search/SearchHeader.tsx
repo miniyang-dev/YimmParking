@@ -11,6 +11,8 @@ interface Props {
   mode: SortMode;
   radiusLabel: string | null;
   asOfLabel: string | null;
+  /** Where an address search landed, so a wrong guess shows instead of passing as the answer. */
+  resolvedLabel?: string | null;
   locating: boolean;
   compact?: boolean;
   theme: Theme;
@@ -29,6 +31,7 @@ export function SearchHeader({
   mode,
   radiusLabel,
   asOfLabel,
+  resolvedLabel = null,
   locating,
   compact = false,
   theme,
@@ -43,6 +46,7 @@ export function SearchHeader({
   const { t, toggle } = useI18n();
   const [text, setText] = useState(initialText);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [emptyHint, setEmptyHint] = useState(false);
   const searchArea = useRef<HTMLDivElement>(null);
 
   // The panel stays open while the person works in it (star, rename) and closes on a tap
@@ -60,10 +64,13 @@ export function SearchHeader({
   function submit(event: FormEvent) {
     event.preventDefault();
     const value = text.trim();
-    if (value) {
-      setPanelOpen(false);
-      onSubmit(value);
+    if (!value) {
+      setEmptyHint(true);
+      return;
     }
+    setEmptyHint(false);
+    setPanelOpen(false);
+    onSubmit(value);
   }
 
   return (
@@ -109,13 +116,21 @@ export function SearchHeader({
             autoComplete="street-address"
             placeholder={t("search.placeholder")}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              setEmptyHint(false);
+            }}
             onFocus={() => setPanelOpen(true)}
           />
           <button type="submit" className="field__go">
             {t("search.submit")}
           </button>
         </form>
+        {emptyHint && (
+          <p className="head__hint" role="alert">
+            {t("search.empty")}
+          </p>
+        )}
         {panelOpen && savedPanel && !compact && (
           <SavedPlaces
             onPick={(place) => {
@@ -152,10 +167,14 @@ export function SearchHeader({
       </div>
       )}
 
-      {(radiusLabel || asOfLabel) && (
+      {(resolvedLabel || radiusLabel || asOfLabel) && (
         <div className="scale">
           <span className="scale__bar" aria-hidden="true" />
-          <span>{[radiusLabel, asOfLabel].filter(Boolean).join(" · ")}</span>
+          <span>
+            {[resolvedLabel ? t("scale.resolved", { place: resolvedLabel }) : null, radiusLabel, asOfLabel]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
         </div>
       )}
     </header>
