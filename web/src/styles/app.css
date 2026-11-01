@@ -153,6 +153,26 @@ a {
 
 /* ---- header: the map's title block -------------------------------------------------- */
 
+/* The first Tab stop: invisible until it has focus, then a plain bar over the title block. */
+.skip {
+  position: absolute;
+  left: var(--space-3);
+  top: -64px;
+  z-index: 10;
+  padding: var(--space-3) var(--space-4);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 800;
+}
+
+.skip:focus-visible {
+  top: var(--space-2);
+}
+
+.main:focus {
+  outline: none;
+}
+
 .head {
   /* Tight on a phone: the first lot should start in the upper half of the screen. */
   padding: max(var(--space-3), env(safe-area-inset-top)) var(--space-4) var(--space-2);

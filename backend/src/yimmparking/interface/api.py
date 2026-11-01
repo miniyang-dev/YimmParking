@@ -12,6 +12,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
+from starlette.types import Scope
 
 from yimmparking.application.feed_watch import source_statuses, stale_cities
 from yimmparking.application.insights import LotInsight
@@ -222,6 +224,19 @@ def to_bike_dto(hit: BikeHit, origin: GeoPoint) -> BikeStationDTO:
         observed_at=s.observed_at,
         bearing_deg=int(round(initial_bearing_deg(origin, s.location))) % 360,
     )
+
+
+class _WebFiles(StaticFiles):
+    """The built client. Pages are re-checked on every visit (`no-cache` still allows a cached
+    copy, but only after the server says it is current), so a deploy reaches people at once
+    instead of after the browser's own guess at how long to keep an old page; the files in
+    `assets/` carry a hash in their name and can be kept."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        if not path.replace("\\", "/").startswith("assets/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 def create_app(container: Container | None = None, settings: Settings | None = None) -> FastAPI:
@@ -481,6 +496,6 @@ def create_app(container: Container | None = None, settings: Settings | None = N
 
     # Last, so every /api route wins; serves the built client when one exists.
     if settings.web_dist is not None:
-        app.mount("/", StaticFiles(directory=settings.web_dist, html=True), name="web")
+        app.mount("/", _WebFiles(directory=settings.web_dist, html=True), name="web")
 
     return app

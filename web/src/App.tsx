@@ -156,7 +156,7 @@ export function App() {
         <SheetSkeleton />
       </>
     ) : search.isError ? (
-      <div className="notice" role="alert">
+      <div className="notice" role="alert" id="search-error">
         <p>{t(errorKey(search.error))}</p>
         {isRetryable(search.error) && (
           <button type="button" className="textbtn" onClick={() => void search.refetch()}>
@@ -232,6 +232,12 @@ export function App() {
 
   const hasSearch = route.q !== null || route.lat !== null;
 
+  // A search that fails hands the keyboard back to the field, with the reason attached to it.
+  const searchFailed = search.isError && hasSearch && !selected;
+  useEffect(() => {
+    if (searchFailed) document.getElementById("address")?.focus();
+  }, [searchFailed, route.q, route.lat]);
+
   // The tab and history entry say what is open, not only the site's name.
   const subject = settingsOpen
     ? t("settings.title")
@@ -248,6 +254,9 @@ export function App() {
 
   return (
     <div className="app">
+      <a className="skip" href="#main">
+        {t("skip.main")}
+      </a>
       <SearchHeader
         key={initialText}
         initialText={initialText}
@@ -262,6 +271,7 @@ export function App() {
             : null
         }
         locating={locating}
+        invalid={searchFailed}
         compact={settingsOpen || (!wide && (selected !== null || curbOpen !== null))}
         theme={theme}
         onTheme={cycleTheme}
@@ -281,14 +291,14 @@ export function App() {
       />
 
       {settingsOpen ? (
-        <main className="main">
+        <main className="main" id="main" tabIndex={-1}>
           {locateNotice}
           <SettingsPage onDone={() => setRoute({ view: null })} />
         </main>
       ) : wide && !hasSearch ? (
         // Desktop, before any search: the start text and the legend side by side, centred,
         // rather than a sheet column and a detail column with nothing to put in either.
-        <main className="main home">
+        <main className="main home" id="main" tabIndex={-1}>
           <div className="home__grid">
             <div>
               {locateNotice}
@@ -299,7 +309,7 @@ export function App() {
         </main>
       ) : wide ? (
         // Desktop: the sheet stays on the left, the control being run to fills the right.
-        <main className="main desk">
+        <main className="main desk" id="main" tabIndex={-1}>
           <div className="desk__list">
             {locateNotice}
             {listBody}
@@ -310,7 +320,7 @@ export function App() {
           </div>
         </main>
       ) : (
-        <main className="main">
+        <main className="main" id="main" tabIndex={-1}>
           {locateNotice}
           {detail ?? listBody}
           {showScale && <Legend />}

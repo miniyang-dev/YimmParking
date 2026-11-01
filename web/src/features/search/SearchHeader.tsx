@@ -14,6 +14,8 @@ interface Props {
   /** Where an address search landed, so a wrong guess shows instead of passing as the answer. */
   resolvedLabel?: string | null;
   locating: boolean;
+  /** The last search failed: the field says so, and points at the message. */
+  invalid?: boolean;
   compact?: boolean;
   theme: Theme;
   onTheme: () => void;
@@ -35,6 +37,7 @@ export function SearchHeader({
   asOfLabel,
   resolvedLabel = null,
   locating,
+  invalid = false,
   compact = false,
   theme,
   onTheme,
@@ -127,6 +130,8 @@ export function SearchHeader({
           </label>
           <input
             id="address"
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? "search-error" : undefined}
             className="field__input"
             type="search"
             inputMode="search"

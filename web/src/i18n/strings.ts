@@ -3,6 +3,7 @@ import type { Locale } from "../domain/types";
 const zh = {
   "app.name": "YimmParking",
   "app.home": "回到首頁",
+  "skip.main": "跳到主要內容",
   "lang.toggle": "中 / EN",
   "theme.light": "淺色",
   "theme.dark": "深色",
@@ -273,6 +274,7 @@ export type StringKey = keyof typeof zh;
 const en: Record<StringKey, string> = {
   "app.name": "YimmParking",
   "app.home": "Home",
+  "skip.main": "Skip to main content",
   "lang.toggle": "中 / EN",
   "theme.light": "Light",
   "theme.dark": "Dark",

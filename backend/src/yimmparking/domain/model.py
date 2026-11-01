@@ -58,14 +58,26 @@ class FreshnessPolicy:
 
     fresh_s: int = 15 * 60
     expire_s: int = 60 * 60
+    # TDX's Taipei data changes only about every 35 minutes and is read every 30, so a reading
+    # 20-65 minutes old is the newest anyone has: it is not "old", and it must not expire early.
+    tdx_fresh_s: int = 40 * 60
+    tdx_expire_s: int = 75 * 60
 
-    def classify(self, observed_at: datetime | None, now: datetime) -> Freshness:
+    def classify(
+        self,
+        observed_at: datetime | None,
+        now: datetime,
+        source: AvailabilitySource | None = None,
+    ) -> Freshness:
         if observed_at is None:
             return Freshness.UNKNOWN
+        from_tdx = source is AvailabilitySource.TDX
+        fresh_s = self.tdx_fresh_s if from_tdx else self.fresh_s
+        expire_s = self.tdx_expire_s if from_tdx else self.expire_s
         age = (now - observed_at).total_seconds()
-        if age <= self.fresh_s:
+        if age <= fresh_s:
             return Freshness.FRESH
-        if age <= self.expire_s:
+        if age <= expire_s:
             return Freshness.STALE
         return Freshness.EXPIRED
 

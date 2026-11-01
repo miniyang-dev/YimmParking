@@ -120,8 +120,8 @@ class SearchNearbyParking:
                 freshness = Freshness.UNKNOWN
             else:
                 count, observed_at = reading
-                freshness = self._freshness.classify(observed_at, now)
                 source = sources.get(item.lot.id)
+                freshness = self._freshness.classify(observed_at, now, source)
                 availability = Availability.from_reading(
                     count, item.lot.total_car, observed_at, source
                 )

@@ -229,6 +229,19 @@ def test_health_reports_the_web_build_commit_and_follows_a_rebuild(tmp_path) -> 
     container.close()
 
 
+def test_the_page_is_rechecked_on_every_visit_but_hashed_assets_are_kept(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "index.html").write_text("<!doctype html><title>x</title>", encoding="utf-8")
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "index-abc123.js").write_text("1", encoding="utf-8")
+    container = build("k")
+    object.__setattr__(container.settings, "web_dist", tmp_path)
+    with TestClient(create_app(container=container)) as c:
+        assert c.get("/").headers["cache-control"] == "no-cache"
+        assert c.get("/index.html").headers["cache-control"] == "no-cache"
+        assert "cache-control" not in c.get("/assets/index-abc123.js").headers
+    container.close()
+
+
 def test_nearby_orders_by_brand_then_distance(client: TestClient) -> None:
     body = client.get(
         "/api/v1/parking/nearby", params={"lat": CENTER.lat, "lng": CENTER.lng}

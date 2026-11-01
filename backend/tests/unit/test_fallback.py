@@ -238,7 +238,17 @@ def test_the_backup_is_read_at_most_once_per_interval() -> None:
 
 
 def test_the_backup_is_read_again_before_its_counts_expire() -> None:
-    # Just before a read, a reading can be as old as TDX's own cadence plus our interval; allow
-    # the few minutes past the hour of a worker tick and TDX's publishing delay, no more.
-    expires = timedelta(seconds=FreshnessPolicy().expire_s)
-    assert expires + timedelta(minutes=5) >= TDX_TAIPEI_CADENCE + BACKUP_INTERVAL
+    # Just before a read, a reading can be as old as TDX's own cadence plus our interval.
+    expires = timedelta(seconds=FreshnessPolicy().tdx_expire_s)
+    assert expires >= TDX_TAIPEI_CADENCE + BACKUP_INTERVAL
+
+
+def test_a_tdx_reading_stays_fresh_for_forty_minutes_and_a_city_one_for_fifteen() -> None:
+    policy = FreshnessPolicy()
+    at = datetime(2026, 11, 1, 3, 0, tzinfo=UTC)
+    later = at + timedelta(minutes=30)
+    assert policy.classify(at, later, AvailabilitySource.TDX).value == "fresh"
+    assert policy.classify(at, later, AvailabilitySource.CITY).value == "stale"
+    assert policy.classify(at, later).value == "stale"
+    assert policy.classify(at, at + timedelta(minutes=70), AvailabilitySource.TDX).value == "stale"
+    assert policy.classify(at, at + timedelta(minutes=80), AvailabilitySource.TDX).value == "expired"
