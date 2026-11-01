@@ -190,6 +190,12 @@ export function Legend() {
           <span>{t("legend.none")}</span>
         </li>
         <li>
+          <span>{t("legend.band")}</span>
+        </li>
+        <li>
+          <span>{t("legend.approx")}</span>
+        </li>
+        <li>
           <span>{t("legend.byPhone")}</span>
         </li>
       </ul>

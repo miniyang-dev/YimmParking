@@ -32,6 +32,12 @@ export function SettingsPage({ onDone }: Props) {
 
   return (
     <section className="prefs" aria-labelledby="prefs-title">
+      <button type="button" className="back prefs__back" onClick={onDone}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M15 5l-7 7 7 7" />
+        </svg>
+        {t("settings.back")}
+      </button>
       <h2 id="prefs-title" className="prefs__title">
         {t("settings.title")}
       </h2>

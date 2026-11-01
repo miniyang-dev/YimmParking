@@ -8,8 +8,10 @@ import { useI18n } from "../../i18n";
  */
 export function StaleNotice({ stale, lots }: { stale: readonly StaleSource[]; lots: readonly Lot[] }) {
   const { t } = useI18n();
-  const shown = staleForList(stale, lots);
   const fallback = tdxCities(lots);
+  // A city whose counts come from TDX is already named above; saying its lots show "no data"
+  // as well would contradict the numbers beside it.
+  const shown = staleForList(stale, lots).filter((source) => !fallback.includes(source.city));
   if (shown.length === 0 && fallback.length === 0) return null;
   return (
     <div className="notice" role="status">

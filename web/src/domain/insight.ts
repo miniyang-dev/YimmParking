@@ -77,6 +77,6 @@ export function taipeiSlot(now: Date, slotMinutes = 30): number {
 export function niceMax(value: number): number {
   if (value <= 10) return 10;
   const power = 10 ** Math.floor(Math.log10(value));
-  for (const step of [1, 2, 5, 10]) if (step * power >= value) return step * power;
+  for (const step of [1, 1.5, 2, 3, 5, 10]) if (step * power >= value) return step * power;
   return 10 * power;
 }

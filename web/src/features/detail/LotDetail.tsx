@@ -1,10 +1,10 @@
-import { ageMinutes } from "../../domain/availability";
+import { ageMinutes, spaceState } from "../../domain/availability";
 import { compassLabel } from "../../domain/compass";
 import { formatDistance } from "../../domain/distance";
 import { hoursPhrase } from "../../domain/insight";
-import { feePhrase } from "../../domain/lotText";
+import { feePhrase, formatServiceTime } from "../../domain/lotText";
 import { directionsUrl, type Coordinate } from "../../domain/maps";
-import { dialable } from "../../domain/phone";
+import { dialable, displayPhone } from "../../domain/phone";
 import type { Lot } from "../../domain/types";
 import { BRAND_LABEL } from "../../domain/vendors";
 import { walkMinutes } from "../../domain/walk";
@@ -48,7 +48,7 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
   const dial = lot.phone ? dialable(lot.phone) : null;
   const hours = hoursPhrase(lot.hours);
   const fee = feePhrase(lot);
-  const facts: [string, string][] = [[t("detail.hours"), lot.service_time || "—"]];
+  const facts: [string, string][] = [[t("detail.hours"), formatServiceTime(lot.service_time) || "—"]];
   if (lot.total_car !== null && lot.total_car > 0) facts.push([t("detail.capacity"), String(lot.total_car)]);
   if (lot.ev_charging_spaces) facts.push([t("detail.ev"), String(lot.ev_charging_spaces)]);
   if (lot.accessible_spaces) facts.push([t("detail.access"), String(lot.accessible_spaces)]);
@@ -119,7 +119,10 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
         <div className="spaces">
           <SpaceCell availability={a} now={now} />
           <p className="spaces__text">
-            {age !== null && a.state === "known" ? t("spaces.ago", { min: age }) : ""}
+            {/* A stale cell already says how old it is. */}
+            {age !== null && a.state === "known" && spaceState(a).kind !== "stale"
+              ? t("spaces.ago", { min: age })
+              : ""}
             {warning && <span className="spaces__warn">{warning}</span>}
             {hours && <span className="spaces__hours">{t(hours.key, hours.vars)}</span>}
             {a.source === "tdx" && <span className="spaces__warn">{t("source.tdxLot")}</span>}
@@ -164,10 +167,10 @@ export function LotDetail({ lot, number, now, origin, originLabel, onBack }: Pro
               <dd>
                 {dial ? (
                   <a className="link link--plain" href={`tel:${dial}`}>
-                    {lot.phone}
+                    {displayPhone(lot.phone)}
                   </a>
                 ) : (
-                  lot.phone
+                  displayPhone(lot.phone)
                 )}
               </dd>
             </div>

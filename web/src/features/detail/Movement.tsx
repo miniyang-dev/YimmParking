@@ -8,15 +8,15 @@ export function Movement({ lot }: { lot: Lot }) {
   const live = lot.availability.state === "known";
   if (!live && lot.doubts.length === 0) return null;
   const phrases = trendPhrases(lot.trend, { quiet: false });
+  // No movement to report and nothing to doubt: a block saying so only pushes "navigate" down.
+  if (phrases.length === 0 && lot.doubts.length === 0) return null;
   return (
     <section className="move" aria-labelledby="move-title">
       <h2 id="move-title" className="band band--other">
         <span>{t("trend.title")}</span>
       </h2>
-      {live && (
-        <p className="move__trend">
-          {phrases.length > 0 ? phrases.map((p) => t(p.key, p.vars)).join("，") : t("trend.none")}
-        </p>
+      {live && phrases.length > 0 && (
+        <p className="move__trend">{phrases.map((p) => t(p.key, p.vars)).join("，")}</p>
       )}
       {lot.doubts.map((doubt) => (
         <p key={doubt} className="move__doubt">

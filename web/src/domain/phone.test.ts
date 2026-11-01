@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dialable } from "./phone";
+import { dialable, displayPhone } from "./phone";
 
 describe("dialable", () => {
   it("adds the 02 area code a local Taipei number leaves out", () => {
@@ -36,5 +36,18 @@ describe("dialable", () => {
     expect(dialable("1234567")).toBeNull();
     expect(dialable("02123456789")).toBeNull();
     expect(dialable("26550818 26550819")).toBeNull(); // two numbers run together
+  });
+});
+
+describe("displayPhone", () => {
+  it("groups a landline and a mobile number for reading", () => {
+    expect(displayPhone("0226550818")).toBe("(02) 2655-0818");
+    expect(displayPhone("0912345678")).toBe("0912-345-678");
+  });
+
+  it("leaves anything else as written", () => {
+    expect(displayPhone("(02)2754-6661分機18")).toBe("(02)2754-6661分機18");
+    expect(displayPhone("2523-5000 #1138")).toBe("2523-5000 #1138");
+    expect(displayPhone("26550818")).toBe("26550818");
   });
 });

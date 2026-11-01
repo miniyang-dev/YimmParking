@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { SavedPlace } from "../../domain/places";
 import type { SortMode } from "../../domain/types";
 import { useI18n } from "../../i18n";
-import type { Theme } from "../../domain/theme";
+import { nextTheme, type Theme } from "../../domain/theme";
 import { Symbol } from "../../ui/Symbol";
 import { SavedPlaces } from "./SavedPlaces";
 
@@ -18,6 +18,8 @@ interface Props {
   theme: Theme;
   onTheme: () => void;
   onSettings: () => void;
+  /** The name at the top returns to the empty start. */
+  onHome: () => void;
   onSubmit: (text: string) => void;
   onLocate: () => void;
   onMode: (mode: SortMode) => void;
@@ -37,6 +39,7 @@ export function SearchHeader({
   theme,
   onTheme,
   onSettings,
+  onHome,
   onSubmit,
   onLocate,
   onMode,
@@ -76,7 +79,19 @@ export function SearchHeader({
   return (
     <header className="head">
       <div className="head__brand">
-        <h1 className="head__name">{t("app.name")}</h1>
+        <h1 className="head__name">
+          <a
+            href="/"
+            className="head__home"
+            aria-label={`${t("app.name")}, ${t("app.home")}`}
+            onClick={(event) => {
+              event.preventDefault();
+              onHome();
+            }}
+          >
+            {t("app.name")}
+          </a>
+        </h1>
         <div className="head__actions">
           <button type="button" className="chip" onClick={onSettings}>
             {t("settings.open")}
@@ -85,7 +100,10 @@ export function SearchHeader({
             type="button"
             className="chip"
             onClick={onTheme}
-            aria-label={t("theme.label", { mode: t(`theme.${theme}`) })}
+            aria-label={t("theme.label", {
+              mode: t(`theme.${theme}`),
+              next: t(`theme.${nextTheme(theme)}`),
+            })}
           >
             {t(`theme.${theme}`)}
           </button>

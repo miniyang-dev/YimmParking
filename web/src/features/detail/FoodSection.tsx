@@ -112,6 +112,10 @@ export function FoodSection({
     `${lot.id}|${category ?? "all"}|${floor}|${sort}|${visible.length}`,
   );
   const pickedPlace = spin.view.picked !== null ? visible[spin.view.picked] : undefined;
+  // Opening status is said where it sets places apart: every row when only some are shut, once
+  // in the count line when all of them are (at night, "closed" on every row is only noise).
+  const withHours = visible.filter((place) => place.open_now !== null);
+  const allClosed = withHours.length > 1 && withHours.every((place) => !place.open_now);
 
   function rejectPicked() {
     if (spin.view.picked === null || pickedPlace === undefined) return;
@@ -210,6 +214,7 @@ export function FoodSection({
         </div>
         <p className="food__count">
           {t("food.matching", { shown: shown.length, total: query.data.results.length })}
+          {allClosed && ` · ${t("food.closedAll")}`}
         </p>
         <p className="food__note">
           {t("food.prefiltered", { rating: applied.toFixed(1), n: query.data.min_reviews })}
@@ -287,6 +292,7 @@ export function FoodSection({
                     <td className="lots__main">
                       <a
                         className="link"
+                        title={place.name}
                         href={directionsUrl(origin, place, { placeId: place.id })}
                         target="_blank"
                         rel="noreferrer"
@@ -304,9 +310,7 @@ export function FoodSection({
                           <b>{t("walk.straight", { d: formatDistance(place.distance_m) })}</b>
                         )}
                         {place.primary_type && <span>{place.primary_type}</span>}
-                        {place.open_now !== null && (
-                          <span>{place.open_now ? t("food.open") : t("food.closed")}</span>
-                        )}
+                        {place.open_now === false && !allClosed && <span>{t("food.closed")}</span>}
                       </div>
                     </td>
                     <td className="lots__rating">

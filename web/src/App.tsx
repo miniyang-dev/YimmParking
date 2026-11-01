@@ -230,6 +230,16 @@ export function App() {
     />
   ) : null;
 
+  const hasSearch = route.q !== null || route.lat !== null;
+
+  // The tab and history entry say what is open, not only the site's name.
+  const subject = settingsOpen
+    ? t("settings.title")
+    : (shown?.name ?? (hasSearch ? (data?.origin.label ?? route.label ?? route.q) : null));
+  useEffect(() => {
+    document.title = [subject, t("app.name")].filter(Boolean).join(" · ");
+  }, [subject, t]);
+
   const locateNotice = locateError && (
     <p className="notice" role="alert">
       {t("error.geolocation")}
@@ -256,6 +266,9 @@ export function App() {
         theme={theme}
         onTheme={cycleTheme}
         onSettings={() => setRoute({ view: "settings" })}
+        onHome={() =>
+          setRoute({ q: null, lat: null, lng: null, label: null, lot: null, curb: null, view: null })
+        }
         onSubmit={(text) => {
           setLocateError(false);
           rememberNextAddress.current = true;
@@ -271,6 +284,18 @@ export function App() {
         <main className="main">
           {locateNotice}
           <SettingsPage onDone={() => setRoute({ view: null })} />
+        </main>
+      ) : wide && !hasSearch ? (
+        // Desktop, before any search: the start text and the legend side by side, centred,
+        // rather than a sheet column and a detail column with nothing to put in either.
+        <main className="main home">
+          <div className="home__grid">
+            <div>
+              {locateNotice}
+              {listBody}
+            </div>
+            <Legend />
+          </div>
         </main>
       ) : wide ? (
         // Desktop: the sheet stays on the left, the control being run to fills the right.

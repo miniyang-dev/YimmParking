@@ -59,6 +59,6 @@ describe("chart helpers", () => {
   });
 
   it("rounds the axis top up to a clean number", () => {
-    expect([3, 10, 11, 37, 180, 201, 950].map(niceMax)).toEqual([10, 10, 20, 50, 200, 500, 1000]);
+    expect([3, 10, 11, 37, 180, 201, 950, 1050].map(niceMax)).toEqual([10, 10, 15, 50, 200, 300, 1000, 1500]);
   });
 });
